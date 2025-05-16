@@ -34,5 +34,4 @@ export * from './modules/agents/components/AgentsFilters';
 export * from './modules/agents/components/AgentsList';
 export * from './modules/agents/providers/AgentsFiltersProvider';
 export * from './modules/home/components/GettingStarted';
-export type * from './modules/home/components/VideoBeeAI';
 export * from './utils/constants';

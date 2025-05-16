@@ -14,17 +14,37 @@
  * limitations under the License.
  */
 
-.button {
-  all: unset;
-  display: flex;
-  justify-content: center;
-  border-radius: 50%;
-  background: $white;
-  cursor: pointer;
+.root {
+  position: relative;
+  border: 1px solid $layer-03;
+  background-color: $layer-02;
+  aspect-ratio: 16 / 9;
+  video {
+    inline-size: 100%;
+    block-size: 100%;
+  }
+}
 
-  > svg {
-    fill: $black;
-    inline-size: var(--play-button-size);
-    block-size: var(--play-button-size);
+.button {
+  &:global(.cds--popover-container) {
+    position: absolute;
+    inset-inline-end: rem(16px);
+    inset-block-end: rem(16px);
+    z-index: 1;
+    svg {
+      inline-size: rem(24px);
+      block-size: rem(24px);
+    }
+  }
+  :global(.cds--popover) {
+    display: none;
+  }
+  :global(.cds--btn) {
+    &:focus,
+    &:active {
+      background-color: transparent;
+      box-shadow: none;
+      border-color: transparent;
+    }
   }
 }
