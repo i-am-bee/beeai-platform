@@ -14,26 +14,13 @@
  * limitations under the License.
  */
 
-import { Outlet } from 'react-router';
+import { createContext } from 'react';
 
-import { AppHeader } from '#components/AppHeader/AppHeader.tsx';
-import { AgentDetailPanel } from '#modules/agents/components/AgentDetailPanel.tsx';
+export const AppContext = createContext<AppContextValue>({});
 
-import classes from './AppLayout.module.scss';
-import { AppSidebar } from './AppSidebar';
-
-export function AppLayout() {
-  return (
-    <div className={classes.root}>
-      <AppHeader className={classes.header} />
-
-      <AppSidebar />
-
-      <main className={classes.main} data-transition>
-        <Outlet />
-
-        <AgentDetailPanel />
-      </main>
-    </div>
-  );
+interface AppContextValue {
+  sidebarOpen?: boolean;
+  agentDetailOpen?: boolean;
+  toggleSidebar?: () => void;
+  toggleAgentDetail?: () => void;
 }

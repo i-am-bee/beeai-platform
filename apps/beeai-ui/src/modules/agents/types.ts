@@ -14,26 +14,8 @@
  * limitations under the License.
  */
 
-import { Outlet } from 'react-router';
+import type { AgentName } from './api/types';
 
-import { AppHeader } from '#components/AppHeader/AppHeader.tsx';
-import { AgentDetailPanel } from '#modules/agents/components/AgentDetailPanel.tsx';
-
-import classes from './AppLayout.module.scss';
-import { AppSidebar } from './AppSidebar';
-
-export function AppLayout() {
-  return (
-    <div className={classes.root}>
-      <AppHeader className={classes.header} />
-
-      <AppSidebar />
-
-      <main className={classes.main} data-transition>
-        <Outlet />
-
-        <AgentDetailPanel />
-      </main>
-    </div>
-  );
-}
+export type AgentPageParams = {
+  agentName: AgentName;
+};

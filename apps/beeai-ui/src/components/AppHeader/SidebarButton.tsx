@@ -14,22 +14,19 @@
  * limitations under the License.
  */
 
-import clsx from 'clsx';
-import type { PropsWithChildren } from 'react';
+import { Menu } from '@carbon/icons-react';
+import { Button } from '@carbon/react';
 
-import classes from './AppHeader.module.scss';
-import { Container } from './Container';
+import { useApp } from '#contexts/App/index.ts';
 
-interface Props {
-  className?: string;
-}
+import classes from './SidebarButton.module.scss';
 
-export function AppHeader({ className, children }: PropsWithChildren<Props>) {
+export function SidebarButton() {
+  const { toggleSidebar } = useApp();
+
   return (
-    <header className={clsx(classes.root, className)}>
-      <Container size="max">
-        <div className={classes.holder}>{children}</div>
-      </Container>
-    </header>
+    <Button kind="ghost" size="sm" renderIcon={Menu} className={classes.root} onClick={toggleSidebar}>
+      BeeAI
+    </Button>
   );
 }

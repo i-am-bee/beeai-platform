@@ -14,26 +14,35 @@
  * limitations under the License.
  */
 
-import { Outlet } from 'react-router';
+.root {
+  display: flex;
+  flex-direction: column;
+  row-gap: $spacing-04;
+}
 
-import { AppHeader } from '#components/AppHeader/AppHeader.tsx';
-import { AgentDetailPanel } from '#modules/agents/components/AgentDetailPanel.tsx';
+.heading {
+  font-size: rem(14px);
+  line-height: math.div(18, 14);
+  font-weight: 600;
+  letter-spacing: $letter-spacing;
+  padding-inline: $spacing-03;
+}
 
-import classes from './AppLayout.module.scss';
-import { AppSidebar } from './AppSidebar';
+.list {
+  display: flex;
+  flex-direction: column;
+  row-gap: $spacing-02;
+}
 
-export function AppLayout() {
-  return (
-    <div className={classes.root}>
-      <AppHeader className={classes.header} />
+.button {
+  inline-size: 100%;
+  padding: $spacing-03 - rem(1px);
+  &:global(.cds--skeleton) {
+    inline-size: 100%;
+    min-block-size: rem(34px);
+  }
 
-      <AppSidebar />
-
-      <main className={classes.main} data-transition>
-        <Outlet />
-
-        <AgentDetailPanel />
-      </main>
-    </div>
-  );
+  &.isActive {
+    background-color: $layer-02;
+  }
 }

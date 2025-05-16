@@ -14,26 +14,22 @@
  * limitations under the License.
  */
 
-import { Outlet } from 'react-router';
+import { Container } from '@i-am-bee/beeai-ui';
+import clsx from 'clsx';
+import type { PropsWithChildren } from 'react';
 
-import { AppHeader } from '#components/AppHeader/AppHeader.tsx';
-import { AgentDetailPanel } from '#modules/agents/components/AgentDetailPanel.tsx';
+import classes from './AppHeader.module.scss';
 
-import classes from './AppLayout.module.scss';
-import { AppSidebar } from './AppSidebar';
+interface Props {
+  className?: string;
+}
 
-export function AppLayout() {
+export function AppHeader({ className, children }: PropsWithChildren<Props>) {
   return (
-    <div className={classes.root}>
-      <AppHeader className={classes.header} />
-
-      <AppSidebar />
-
-      <main className={classes.main} data-transition>
-        <Outlet />
-
-        <AgentDetailPanel />
-      </main>
-    </div>
+    <header className={clsx(classes.root, className)}>
+      <Container size="max">
+        <div className={classes.holder}>{children}</div>
+      </Container>
+    </header>
   );
 }

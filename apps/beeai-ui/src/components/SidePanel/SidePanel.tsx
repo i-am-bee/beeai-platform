@@ -14,26 +14,30 @@
  * limitations under the License.
  */
 
-import { Outlet } from 'react-router';
+import clsx from 'clsx';
+import type { PropsWithChildren } from 'react';
 
-import { AppHeader } from '#components/AppHeader/AppHeader.tsx';
-import { AgentDetailPanel } from '#modules/agents/components/AgentDetailPanel.tsx';
+import classes from './SidePanel.module.scss';
 
-import classes from './AppLayout.module.scss';
-import { AppSidebar } from './AppSidebar';
+interface Props {
+  variant: 'left' | 'right';
+  isOpen?: boolean;
+  className?: string;
+}
 
-export function AppLayout() {
+export function SidePanel({ variant, isOpen, className, children }: PropsWithChildren<Props>) {
   return (
-    <div className={classes.root}>
-      <AppHeader className={classes.header} />
-
-      <AppSidebar />
-
-      <main className={classes.main} data-transition>
-        <Outlet />
-
-        <AgentDetailPanel />
-      </main>
-    </div>
+    <aside
+      className={clsx(
+        classes.root,
+        [classes[variant]],
+        {
+          [classes.isOpen]: isOpen,
+        },
+        className,
+      )}
+    >
+      {children}
+    </aside>
   );
 }

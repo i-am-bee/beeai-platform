@@ -14,26 +14,16 @@
  * limitations under the License.
  */
 
-import { Outlet } from 'react-router';
+import { use } from 'react';
 
-import { AppHeader } from '#components/AppHeader/AppHeader.tsx';
-import { AgentDetailPanel } from '#modules/agents/components/AgentDetailPanel.tsx';
+import { AppContext } from './app-context';
 
-import classes from './AppLayout.module.scss';
-import { AppSidebar } from './AppSidebar';
+export function useApp() {
+  const context = use(AppContext);
 
-export function AppLayout() {
-  return (
-    <div className={classes.root}>
-      <AppHeader className={classes.header} />
+  if (!context) {
+    throw new Error('useApp must be used within a AppProvider');
+  }
 
-      <AppSidebar />
-
-      <main className={classes.main} data-transition>
-        <Outlet />
-
-        <AgentDetailPanel />
-      </main>
-    </div>
-  );
+  return context;
 }

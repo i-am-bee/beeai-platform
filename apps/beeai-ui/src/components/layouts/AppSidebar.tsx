@@ -14,26 +14,16 @@
  * limitations under the License.
  */
 
-import { Outlet } from 'react-router';
+import { AgentsNav } from '#components/AgentsNav/AgentsNav.tsx';
+import { SidePanel } from '#components/SidePanel/SidePanel.tsx';
+import { useApp } from '#contexts/App/index.ts';
 
-import { AppHeader } from '#components/AppHeader/AppHeader.tsx';
-import { AgentDetailPanel } from '#modules/agents/components/AgentDetailPanel.tsx';
+export function AppSidebar() {
+  const { sidebarOpen } = useApp();
 
-import classes from './AppLayout.module.scss';
-import { AppSidebar } from './AppSidebar';
-
-export function AppLayout() {
   return (
-    <div className={classes.root}>
-      <AppHeader className={classes.header} />
-
-      <AppSidebar />
-
-      <main className={classes.main} data-transition>
-        <Outlet />
-
-        <AgentDetailPanel />
-      </main>
-    </div>
+    <SidePanel variant="left" isOpen={sidebarOpen}>
+      <AgentsNav />
+    </SidePanel>
   );
 }

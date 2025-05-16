@@ -16,6 +16,7 @@
 
 import uniq from 'lodash/uniq';
 
+import { SupportedUis } from '#modules/runs/constants.ts';
 import { compareStrings, isNotNull } from '#utils/helpers.ts';
 
 import { type Agent, LinkType } from './api/types';
@@ -45,4 +46,10 @@ export function getAgentSourceCodeUrl(agent: Agent) {
 
 export function sortAgentsByName(a: Agent, b: Agent) {
   return compareStrings(a.name, b.name);
+}
+
+export function isAgentUiSupported(agent: Agent) {
+  const uiType = agent.metadata.ui?.type;
+
+  return uiType && SupportedUis.includes(uiType);
 }

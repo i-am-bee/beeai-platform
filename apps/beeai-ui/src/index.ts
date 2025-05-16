@@ -18,7 +18,6 @@ export * from './components/CommunityNav/CommunityNav';
 export * from './components/ErrorPage/ErrorPage';
 export * from './components/GitHubLink/GitHubLink';
 export * from './components/layouts/AppFooter';
-export * from './components/layouts/AppHeader';
 export * from './components/layouts/Container';
 export type * from './components/MainContentView/MainContentView';
 export * from './components/MainContentView/MainContentView';

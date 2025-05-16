@@ -14,26 +14,25 @@
  * limitations under the License.
  */
 
-import { Outlet } from 'react-router';
+.root {
+  position: sticky;
+  inset-block-start: 0;
+  background-color: $background;
+  border-block-end: 1px solid $border-subtle-00;
+}
 
-import { AppHeader } from '#components/AppHeader/AppHeader.tsx';
-import { AgentDetailPanel } from '#modules/agents/components/AgentDetailPanel.tsx';
+.holder {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  column-gap: $gap;
+  align-items: center;
+  block-size: rem(56px);
+  > :last-child {
+    text-align: end;
+  }
+}
 
-import classes from './AppLayout.module.scss';
-import { AppSidebar } from './AppSidebar';
-
-export function AppLayout() {
-  return (
-    <div className={classes.root}>
-      <AppHeader className={classes.header} />
-
-      <AppSidebar />
-
-      <main className={classes.main} data-transition>
-        <Outlet />
-
-        <AgentDetailPanel />
-      </main>
-    </div>
-  );
+.agentName {
+  font-size: rem(14px);
+  line-height: math.div(20, 14);
 }

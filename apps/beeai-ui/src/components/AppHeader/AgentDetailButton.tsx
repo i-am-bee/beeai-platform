@@ -14,26 +14,25 @@
  * limitations under the License.
  */
 
-import { Outlet } from 'react-router';
+import { Information } from '@carbon/icons-react';
+import { IconButton } from '@carbon/react';
 
-import { AppHeader } from '#components/AppHeader/AppHeader.tsx';
-import { AgentDetailPanel } from '#modules/agents/components/AgentDetailPanel.tsx';
+import { useApp } from '#contexts/App/index.ts';
 
-import classes from './AppLayout.module.scss';
-import { AppSidebar } from './AppSidebar';
+import classes from './AgentDetailButton.module.scss';
 
-export function AppLayout() {
+export function AgentDetailButton() {
+  const { toggleAgentDetail } = useApp();
+
   return (
-    <div className={classes.root}>
-      <AppHeader className={classes.header} />
-
-      <AppSidebar />
-
-      <main className={classes.main} data-transition>
-        <Outlet />
-
-        <AgentDetailPanel />
-      </main>
-    </div>
+    <IconButton
+      kind="tertiary"
+      size="sm"
+      label="Agent Detail"
+      wrapperClasses={classes.root}
+      onClick={toggleAgentDetail}
+    >
+      <Information />
+    </IconButton>
   );
 }
