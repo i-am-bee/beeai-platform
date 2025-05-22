@@ -1,0 +1,185 @@
+---
+title: "Agents"
+description: "Understanding agents in the BeeAI platform"
+---
+
+# Understanding Agents
+
+Agents are at the core of the BeeAI platform. They represent autonomous components that can perform specific tasks, process information, or interact with users. This document explains agent concepts, their structure, and how they function within the BeeAI ecosystem.
+
+## What are Agents?
+
+In BeeAI, an agent is a self-contained module that:
+
+- Follows the [Agent Communication Protocol](https://agentcommunicationprotocol.dev/) (ACP)
+- Has clearly defined inputs and outputs
+- Performs a specific function or set of related functions
+- Can operate independently or as part of a composition
+- Is packaged as a Docker container
+
+Conceptually, agents can be thought of as specialized "workers" that excel at specific tasks, from simple operations like text summarization to complex workflows like research, content generation, or data analysis.
+
+## Agent Architecture
+
+Every agent in BeeAI has these common components:
+
+### 1. Agent Interface
+
+The interface defines how the agent communicates with the outside world through:
+
+- **Input Schema**: Defines the expected input format
+- **Output Schema**: Specifies the structure of the agent's response
+- **Metadata**: Information about the agent's capabilities, requirements, and usage
+
+### 2. Agent Logic
+
+The core functionality of the agent, which can include:
+
+- Processing input data
+- Making API calls to external services
+- Using language models for text generation
+- Utilizing specialized tools (search, weather, etc.)
+- Performing computations or data analysis
+
+### 3. Container Runtime
+
+All agents run in containerized environments (Docker), ensuring:
+
+- Consistent execution across different platforms
+- Isolation from the host system and other agents
+- Dependency management
+- Scalability and reproducibility
+
+## Agent Types
+
+BeeAI supports various types of agents:
+
+### By Interaction Pattern
+
+- **Chat Agents**: Conversational agents designed for back-and-forth interaction with users
+- **Hands-Off Agents**: Single-purpose agents that process input and produce output without intermediate steps
+- **Custom UI Agents**: Agents with specialized interfaces for specific use cases
+
+### By Framework
+
+- **BeeAI Framework Agents**: Built using the official [BeeAI Framework](https://github.com/i-am-bee/beeai-framework)
+- **Community Framework Agents**: Built with frameworks like LangChain, CrewAI, LlamaIndex, etc.
+- **Custom Agents**: Built with any technology that implements the ACP protocol
+
+### By Purpose
+
+- **Tool Agents**: Perform specific operations like search, data processing, or code generation
+- **Assistant Agents**: Provide conversational help and information to users
+- **Composer Agents**: Coordinate the execution of multiple agents (like sequential_workflow)
+- **Domain-Specific Agents**: Specialized for particular fields like legal, medical, or financial tasks
+
+## Agent Metadata
+
+Agent metadata provides essential information about an agent, including:
+
+- **Name**: Unique identifier for the agent
+- **Description**: Brief summary of the agent's purpose
+- **Documentation**: Detailed explanation of how the agent works
+- **Framework**: The framework or technology used to build the agent
+- **Examples**: Sample usage and expected outputs
+- **Environment Variables**: Configuration options for the agent
+- **UI Type**: How the agent should be presented in the user interface
+- **Links**: References to source code, documentation, etc.
+
+Here's an example of agent metadata:
+
+```yaml
+name: chat
+description: AI-powered conversational system with memory and tools
+metadata:
+  programming_language: Python
+  license: Apache 2.0
+  framework: BeeAI
+  documentation: |
+    The agent is an AI-powered conversational system designed to process user messages,
+    maintain context, and generate intelligent responses...
+  ui:
+    type: chat
+    user_greeting: How can I help you?
+  examples:
+    cli:
+      - command: 'beeai run chat "What is the weather like in Paris?"'
+        name: With tools
+        description: Run agent with tools.
+        output: The current temperature in Paris is 12°C with partly cloudy skies.
+  env:
+    - name: LLM_MODEL
+      description: Model to use from the specified OpenAI-compatible API.
+    - name: LLM_API_BASE
+      description: Base URL for OpenAI-compatible API endpoint
+    - name: LLM_API_KEY
+      description: API key for OpenAI-compatible API endpoint
+```
+
+## Standardized Agent Interfaces
+
+BeeAI provides standardized UI patterns for agent interaction:
+
+### Chat Interface
+
+Designed for conversational agents:
+- Full conversation history and context
+- Message-by-message interaction
+- Streaming responses
+- Suitable for assistants and complex interaction flows
+
+### Hands-Off Interface
+
+For single-input, single-output agents:
+- One input field for the user request
+- Processes the request and returns a complete response
+- No intermediate interaction
+- Suitable for transformation, generation, or analysis tasks
+
+### Custom Interfaces
+
+For specialized agent requirements:
+- JSON input interface for complex data structures
+- Custom visualizations
+- Application-specific UI elements
+
+## Agent Lifecycle
+
+The lifecycle of a BeeAI agent includes these stages:
+
+1. **Discovery**: Agents are found in the registry or from custom sources
+2. **Installation**: Agents are downloaded and installed locally
+3. **Configuration**: Required environment variables are set
+4. **Execution**: The agent runs in response to user requests
+5. **Updating**: Agents are updated to newer versions as needed
+6. **Removal**: Agents can be uninstalled when no longer needed
+
+## Agent Management
+
+BeeAI provides tools for managing agents:
+
+- **Listing Agents**: `beeai list` shows all available agents
+- **Installing**: `beeai install <name>` installs an agent
+- **Running**: `beeai run <name> [input]` executes an agent
+- **Inspecting**: `beeai info <name>` shows agent details
+- **Viewing Logs**: `beeai logs <name>` displays agent logs
+- **Removing**: `beeai remove <name>` uninstalls an agent
+
+## Creating Agents
+
+To create your own agent:
+
+1. Choose a development framework (BeeAI Framework, LangChain, etc.)
+2. Implement the agent logic following the ACP standard
+3. Package the agent as a Docker container
+4. Test the agent locally
+5. Share the agent with others
+
+See [Building Agents](/how-to/build-agents) for detailed instructions.
+
+## Next Steps
+
+- [Run agents](/how-to/run-agents) locally
+- [Compose agents](/how-to/compose-agents) into workflows
+- [Explore the agent catalog](/agents/official-list)
+- [Build your own agents](/how-to/build-agents)

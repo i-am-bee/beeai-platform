@@ -21,30 +21,32 @@
       {
         "group": "How To",
         "pages": [
+          "/how-to/discover-agents",
+          "/how-to/environment-configuration",
           "/how-to/run-agents",
-          "/how-to/compose-agents",
-          "/how-to/import-agents"
+          "/how-to/manage-agents",
+          "/how-to/build-agents",
+          "/how-to/share-agents",
+          "/how-to/cli-reference",
+          "/how-to/ui-overview"
         ]
       },
       {
         "group": "Core Concepts",
-        "pages": ["/concepts/architecture"]
+        "pages": ["concepts/architecture",
+                  "concepts/acp-protocol",
+                  "concepts/agents"]
       },
       {
-        "group": "Agent Catalog",
-        "pages": ["/agents/official-list", "/agents/community-list"]
+        "group": "Deployment",
+        "pages": ["deployment/self-hosting-options",
+                  "deployment/kubernetes"
+                 ]
       },
       {
-        "group": "Agent Communication Protocol",
-        "pages": ["/acp-docs"]
-      },
-      {
-        "group": "Observability & Telemetry",
-        "pages": [
-          "/observability/agents-traceability",
-          "/observability/telemetry",
-          "/observability/custom-agent-traceability"
-        ]
+        "group": "Community and Support",
+        "pages": ["community-and-support/troubleshooting",
+                  "community-and-support/contribute"]
       }
     ]
   },
