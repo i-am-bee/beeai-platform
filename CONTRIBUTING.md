@@ -40,17 +40,15 @@ Edit `[env]` in `mise.local.toml` in the project root ([documentation](https://m
 
 Starting up the platform using the CLI (`beeai platform start`, even `mise beeai-cli:run -- platform start`) will use **published images** by default. To use local images, you need to build them and import them into the platform.
 
-Save a local `beeai-server` image using:
+Build a local `ghcr.io/i-am-bee/beeai-platform/beeai-server:local` image using:
 
 ```sh
 mise beeai-server:image:save
 ```
 
-This will save the image to `~/.beeai/images/beeai-server.tar` tagged as `ghcr.io/i-am-bee/beeai-platform/beeai-server:local`.
-
 Then, start the platform using:
 ```sh
-mise beeai-cli:run -- platform start --import-images --set image.tag=local
+mise beeai-cli:run -- platform start --import ghcr.io/i-am-bee/beeai-platform/beeai-server:local --set image.tag=local
 ```
 
 ### Running and debugging individual components
@@ -212,7 +210,7 @@ Wait a bit, or restart your local BeeAI service, and confirm using `beeai provid
 
 Bump version in `apps/beeai-server/pyproject.toml`. Commit the changes, push to main, and create and push a tag `beeai-server-v<version>`, for example `beeai-server-v0.0.1`. Check the GitHub Actions to see if everything went smoothly.
 
-From the user's point of view, the server is part of the BeeAI CLI through `beeai serve`, so usually after releasing `beeai-server`, you might want to bump the dependency version and release `beeai-cli` as well.
+From the user's point of view, the server is part of the BeeAI CLI through `beeai platform start`, so usually after releasing `beeai-server`, you might want to bump the dependency version and release `beeai-cli` as well.
 
 ### Releasing `beeai-cli`
 
