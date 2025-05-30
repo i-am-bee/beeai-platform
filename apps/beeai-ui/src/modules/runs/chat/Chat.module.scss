@@ -54,7 +54,7 @@
   @include scrollbar();
   position: relative;
   display: flex;
-  flex-direction: column-reverse;
+  flex-direction: column;
   padding-block: $spacing-06;
 
   > ol {
@@ -62,12 +62,6 @@
     flex-direction: column;
     gap: $spacing-09;
   }
-}
-
-.scrollRef {
-  position: absolute;
-  inset-block-end: 0;
-  inset-inline-start: 0;
 }
 
 .bottom {

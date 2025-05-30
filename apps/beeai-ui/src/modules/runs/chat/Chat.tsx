@@ -88,13 +88,13 @@ export function Chat() {
 
         {!isNew && (
           <div className={classes.content} ref={scrollRef}>
-            <div className={classes.scrollRef} ref={bottomRef} />
-
             <ol className={classes.messages} aria-label="messages">
               {messages.map((message) => (
                 <Message key={message.key} message={message} />
               ))}
             </ol>
+
+            <div ref={bottomRef} />
           </div>
         )}
 
