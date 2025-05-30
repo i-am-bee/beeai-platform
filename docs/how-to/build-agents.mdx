@@ -1,14 +1,272 @@
 ---
 title: "Build Agents"
-description: "Under construction"
-# icon: "wrench"
-icon: "spinner"
+description: "Bring agents from any framework into BeeAI"
 ---
 
-## Oops! Docs Under Construction!
+This guide shows you how to wrap existing agents from any framework to work with the BeeAI Platform. You'll learn to use the ACP SDK to create a standardized interface for your agent.
 
-We're buzzing around right now, fueled by caffeine and sheer determination, actively working to complete this documentation. (We promise we're not just buzzing on Reddit. Probably.)
+<Tip>
+If you're building new agents from scratch, check out the [BeeAI Framework](https://github.com/i-am-bee/beeai-framework) with its [native platform integration](https://github.com/i-am-bee/beeai-framework/blob/main/python/docs/integrations.md#beeai-platform-integration).
+</Tip>
 
-In the meantime, bee 🐝 curious—dive into our [GitHub repository](https://github.com/i-am-bee/beeai) to explore the code or even lend a hand! Your contributions help the community grow and make this documentation bloom faster.
+## Prerequisites
 
-Thanks for your patience, and bee-lieve us—we appreciate your support in keeping our hive buzzing with open-source goodness!
+- [BeeAI Platform](/introduction/quickstart) installed
+- Python 3.11 or higher
+- [UV](https://docs.astral.sh/uv/) package manager
+- Your existing agent code ready to integrate
+
+## Quickstart
+
+### Set Up Your Project
+
+Use the [official starter template](https://github.com/i-am-bee/beeai-platform-agent-starter) to get started quickly.
+
+**Option A** – Clone directly:
+
+```bash
+git clone https://github.com/i-am-bee/beeai-platform-agent-starter my-agent
+cd my-agent
+```
+
+**Option B** – Use as a GitHub template:
+
+1. Go to [the template repository](https://github.com/i-am-bee/beeai-platform-agent-starter)
+2. Click "Use this template" → "Create a new repository"
+3. Clone your new repository locally
+
+### Install Dependencies
+
+```bash
+uv sync
+```
+
+### Test the Template Agent
+
+```bash
+uv run server  # start the server
+```
+
+Then in another terminal:
+
+```bash
+beeai run example_agent "Alice"
+```
+
+You should see: "Ciao Alice!" 🎉
+
+Now let's customize this template.
+
+## Project Structure
+
+```bash
+my-agent/
+├── src/beeai_agents/
+│   ├── __init__.py         # Empty package file
+│   └── agent.py            # 👈 Your agent code goes here
+├── Dockerfile              # Container configuration
+├── pyproject.toml          # Dependencies and metadata
+├── uv.lock                 # Dependency lock file
+└── README.md               # Project documentation
+```
+
+**Important files:**
+- `agent.py` - Where you implement your agent's behavior
+- `pyproject.toml` - Add new Python dependencies here
+
+## Build Your Custom Agent
+
+### Implement Your Agent Logic
+
+Navigate to [src/beeai_agents/agent.py](https://github.com/i-am-bee/beeai-platform-agent-starter/blob/main/src/beeai_agents/agent.py) and replace the example with your agent implementation.
+
+**Tips for Wrapping Agents:**
+- The function name becomes the agent ID (override with `name=`)
+- The docstring becomes the description
+- Use `input[-1]` to get the latest user message
+- Send output with `yield MessagePart(content="...")`
+- Multiple agents? Just add more decorated functions.
+
+<Tip>
+Each `@server.agent` function defines a new agent service.
+</Tip>
+
+Here are examples of wrapping popular agent frameworks:
+
+1. [Example: BeeAI Framework](https://github.com/i-am-bee/acp/blob/main/examples/python/beeai-chat/agent.py)
+2. [Example: CrewAI](https://github.com/i-am-bee/acp/blob/main/examples/python/crewai-song-writer/agent.py)
+3. [Example: LangGraph](https://github.com/i-am-bee/acp/blob/main/examples/python/langgraph-greeting/agent.py)
+
+### Configure Agent Metadata
+
+The more metadata, the better the UX. Here's a full example with every supported option:
+
+```python
+@server.agent(
+    name="my-custom-agent",
+    description="A full-featured BeeAI agent with metadata and documentation",
+    metadata=Metadata(
+        version="1.0.0",
+        framework="BeeAI",
+        programming_language="Python",
+        license="Apache 2.0",
+        ui={
+            "type": "hands-off",
+            "user_greeting": "How can I help you process your data today?"
+        },
+        author={
+            "name": "John Doe",
+            "email": "john.doe@example.com",
+            "url": "https://johndoe.dev"
+        },
+        env=[{
+            "name": "API_KEY",
+            "description": "Required API key for external service integration",
+            "required": True
+        }],
+        recommended_models=[
+            "gpt-4o",
+            "gpt-4-turbo",
+            "claude-3-sonnet"
+        ],
+        use_cases=[
+            "**Data Analysis** – Process structured/unstructured data",
+            "**Report Generation** – Produce clean summaries and insights",
+            "**Content Summarization** – Shorten long articles or documents"
+        ],
+        tags=["data-processing", "analysis", "automation", "nlp", "research"],
+        documentation="""
+### My Custom Agent
+
+This agent provides robust data processing with smart insights powered by AI.
+
+#### Features
+- Automatic data type detection
+- Multi-format support (CSV, JSON, XML)
+- AI-driven summarization and recommendation
+
+#### How It Works
+1. Analyze input
+2. Process with AI
+3. Return structured output
+
+#### Input Formats
+- Text
+- Structured files
+- Environment-specified parameters
+
+#### Output
+- JSON with insights, key findings, and confidence scores
+"""
+    )
+)
+async def my_custom_agent(...):
+    ...
+
+```
+
+**Agent Types:**
+- `"hands-off"`: One-shot tasks (summarization, analysis, generation)
+- `"chat"`: Conversational interactions
+
+### Update Dependencies
+
+Add your agent's dependencies to `pyproject.toml`:
+
+```toml
+dependencies = [
+    "acp-sdk>=0.8.1",
+    "requests>=2.31.0",     # Add your dependencies here
+    "crewai >= 0.30.0"      # For example, CrewAI
+]
+```
+
+Then synchronize with `uv sync`.
+
+## Test Your Agent
+
+### Start the Agent Server
+
+```bash
+uv run server
+```
+
+This launches your agent locally. Keep this terminal open - your agent runs only while this command is active.
+
+### Try it with BeeAI
+
+Open a second terminal and run these commands:
+
+```bash
+# See all available agents (yours should show up)
+beeai list
+
+# Talk to your agent!
+beeai run my_agent "Hello!"
+```
+
+If you see a response, congrats - your agent is working!
+
+## Deploy Your Agent
+
+Now that your agent works locally, you have two deployment options:
+
+### Option 1: Quick Local Development (Easiest)
+
+Perfect if you're developing and testing locally:
+
+```bash
+beeai add .
+```
+
+What this does:
+- Builds your agent into a Docker container automatically
+- Adds it directly to your local BeeAI Platform
+- You can immediately use `beeai run my_agent "test"`
+
+When to use this:
+- Quick prototyping and testing
+- Local development
+- You don't need to share the agent with others
+
+### Option 2: Production Deployment (Sharing & CI/CD)
+
+Use this when you want to share your agent or deploy through CI/CD:
+
+**Step 1: Build the Container**
+
+```bash
+beeai build . --tag my-agent:1.0.0 --no-import
+```
+
+Why `--no-import?` This builds the container but doesn't add it to BeeAI yet. You want to push it to a registry first so others can use it.
+
+**Step 2: Push to Container Registry**
+
+Push your container to a registry (Docker Hub, GitHub Container Registry, etc.):
+
+```bash
+# Tag for your registry
+docker tag my-agent:1.0.0 ghcr.io/username/my-agent:1.0.0
+
+# Push to registry  
+docker push ghcr.io/username/my-agent:1.0.0
+```
+
+Why push to a registry?
+- **Sharing**: Others can install your agent with `beeai add ghcr.io/username/my-agent:1.0.0`
+- **Production**: Deploy the same container image across different environments
+- **CI/CD**: Automated builds can push to registries
+- **Versioning**: Tag different versions (`:1.0.0`, `:1.1.0`, `:latest`)
+
+**Step 3: Add to BeeAI Platform**
+
+Now install your agent from the registry:
+
+```bash
+beeai add ghcr.io/username/my-agent:1.0.0
+```
+
+<Note>
+**CI/CD Integration**: The starter template includes a complete GitHub Actions workflow for automated builds. Check out [.github/workflows/build-agent.yaml](https://github.com/i-am-bee/beeai-platform-agent-starter/blob/main/.github/workflows/build-agent.yaml) in your project.
+</Note>

@@ -1,0 +1,249 @@
+---
+title: "CLI Reference"
+description: "Complete reference for the BeeAI command-line interface"
+---
+
+BeeAI command-line interface (CLI) provides powerful tools to discover, run, and manage agents directly from your terminal. This document serves as a comprehensive reference for all available commands and options.
+
+## Basic Usage
+
+The basic syntax for BeeAI commands follows this pattern:
+
+```bash
+beeai [command] [subcommand] [arguments] [options]
+```
+
+To see a list of all available commands:
+
+```bash
+beeai --help
+```
+
+## Core Commands
+
+### List
+
+List all available agents:
+
+```bash
+beeai list
+```
+
+This displays a table with agent names, statuses, descriptions, UI types, locations, missing environment variables, and error messages.
+
+### Run
+
+Run an agent with specified input:
+
+```bash
+beeai run <agent-name> [input]
+```
+
+**Examples:**
+```bash
+# Run chat agent interactively
+beeai run chat
+
+# Run agent with direct input
+beeai run chat "Hello!"
+
+# Run agent with input from file
+beeai run chat < input.txt
+
+# Pipe between agents
+beeai run gpt-researcher "Latest AI developments" | beeai run chat "Summarize in 3 points"
+```
+
+### Info
+
+Get detailed information about a specific agent:
+
+```bash
+beeai info <agent-name>
+```
+
+Shows details including description, input/output schemas, examples, configuration options, and provider information.
+
+### Add
+
+Add an agent to your environment:
+
+```bash
+beeai add <location>
+# Aliases: install
+```
+
+Use `beeai add` when:
+- You want to use an agent (one-step process)
+- You don't care about build details
+- You want the simplest workflow
+
+Location formats:
+
+```bash
+# From Docker image
+beeai add ghcr.io/i-am-bee/beeai-platform/community/aider:latest
+
+# From GitHub repository
+beeai add "https://github.com/i-am-bee/custom-agent"
+
+# From GitHub with version
+beeai add "https://github.com/i-am-bee/custom-agent@v1.0.0"
+
+# From GitHub with specific path
+beeai add "https://github.com/i-am-bee/repo#path=/agents/my-agent"
+
+# From local path (builds Docker image)
+beeai add ./my-agent-directory
+```
+
+### Remove
+
+Remove an agent from your environment:
+
+```bash
+beeai remove <agent-name>
+# Aliases: uninstall, rm, delete
+```
+
+### Logs
+
+View and follow the logs for an agent:
+
+```bash
+beeai logs <agent-name>
+```
+
+This displays the agent's log output and continues streaming new logs as they are generated.
+
+### Build
+
+Build an agent from a local directory or repository:
+
+```bash
+beeai build [context]
+```
+
+Arguments:
+- `context`: Docker context for the agent (default: current directory)
+
+Options:
+- `--tag <name>`: Docker tag for the agent
+- `--multi-platform`: Build for multiple platforms
+- `--import / --no-import`: Import the image into BeeAI platform (default: true)
+
+Use `beeai build` when:
+- You want to test builds before using them (`--no-import`)
+- You need custom build options (`--multi-platform`, custom `--tag`)
+- You're developing and want to control the build process
+- You want to build images for sharing (not immediate use)
+
+Examples:
+
+```bash
+# Build from current directory
+beeai build .
+
+# Build with custom tag
+beeai build . --tag my-agent:latest
+
+# Build without importing
+beeai build . --no-import
+
+# Build from GitHub URL
+beeai build "https://github.com/user/repo"
+```
+
+## Environment Management
+
+### Environment Setup
+
+Interactive setup for LLM provider environment variables:
+
+```bash
+beeai env setup
+```
+
+This guides you through setting up the required environment variables for your chosen LLM provider.
+
+### Environment Variables
+
+Manage environment variables for agents:
+
+```bash
+# List all environment variables
+beeai env list
+
+# Add or update an environment variable
+beeai env add KEY=VALUE
+
+# Remove an environment variable
+beeai env remove KEY
+```
+
+**Examples:**
+```bash
+# Set up an OpenAI-compatible API
+beeai env add LLM_MODEL=gpt-4o
+beeai env add LLM_API_BASE=https://api.openai.com/v1
+beeai env add LLM_API_KEY=sk_...
+```
+
+## System Commands
+
+### Start
+
+Start the BeeAI server:
+
+```bash
+beeai platform start
+```
+
+### Stop
+
+Stop the BeeAI server:
+
+```bash
+beeai platform stop
+```
+
+### UI
+
+Launch the web interface:
+
+```bash
+beeai ui
+```
+
+This runs the server in the foreground.
+
+### Version
+
+Display version information:
+
+```bash
+beeai version
+```
+
+Shows versions of:
+- `beeai-cli`
+- `beeai-server`
+- `acp-sdk`
+
+## Telemetry Management
+
+Control telemetry data sharing:
+
+```bash
+# View telemetry status
+beeai telemetry sharing
+
+# Disable telemetry sharing
+beeai telemetry sharing --disable
+```
+
+## Global Options
+
+Most commands support these general options:
+- `--help`: Show help information for a command
+- `--debug`: Enable debug output for troubleshooting
