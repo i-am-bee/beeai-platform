@@ -14,22 +14,15 @@
  * limitations under the License.
  */
 
-import { Container } from '#components/layouts/Container.tsx';
-import { MainContent } from '#components/layouts/MainContent.tsx';
-import { ViewStack } from '#components/ViewStack/ViewStack.tsx';
-import { AgentsView } from '#modules/agents/list/AgentsView.tsx';
-import { AgentsFiltersProvider } from '#modules/agents/providers/AgentsFiltersProvider.tsx';
+import { AgentRun } from '#modules/runs/components/AgentRun.tsx';
 
-export function Agents() {
-  return (
-    <MainContent>
-      <Container>
-        <ViewStack>
-          <AgentsFiltersProvider>
-            <AgentsView />
-          </AgentsFiltersProvider>
-        </ViewStack>
-      </Container>
-    </MainContent>
-  );
+interface Props {
+  params: {
+    name: string;
+  };
+}
+
+export default async function AgentRunPage({ params }: Props) {
+  const { name } = await params;
+  return <AgentRun name={name} />;
 }

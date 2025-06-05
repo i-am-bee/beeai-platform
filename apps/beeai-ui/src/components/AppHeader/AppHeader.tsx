@@ -15,11 +15,10 @@
  */
 
 import clsx from 'clsx';
-import { useParams } from 'react-router';
 
 import { MainNav } from '#components/layouts/MainNav.tsx';
+import { useAgentNameFromPath } from '#hooks/useAgentNameFromPath.ts';
 import { useAgent } from '#modules/agents/api/queries/useAgent.ts';
-import type { AgentPageParams } from '#modules/agents/types.ts';
 import { getAgentDisplayName } from '#modules/agents/utils.ts';
 
 import { Container } from '../layouts/Container';
@@ -31,7 +30,8 @@ interface Props {
 }
 
 export function AppHeader({ className }: Props) {
-  const { agentName } = useParams<AgentPageParams>();
+  const agentName = useAgentNameFromPath();
+
   const { data: agent } = useAgent({ name: agentName ?? '' });
 
   return (

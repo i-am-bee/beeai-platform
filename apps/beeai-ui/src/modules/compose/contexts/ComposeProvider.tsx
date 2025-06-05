@@ -15,27 +15,25 @@
  */
 
 import type { PropsWithChildren } from 'react';
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useFieldArray, useFormContext } from 'react-hook-form';
-import { useSearchParams } from 'react-router';
 
 import { getErrorCode } from '#api/utils.ts';
 import { useHandleError } from '#hooks/useHandleError.ts';
-import { usePrevious } from '#hooks/usePrevious.ts';
 import { useAgent } from '#modules/agents/api/queries/useAgent.ts';
-import { useListAgents } from '#modules/agents/api/queries/useListAgents.ts';
 import { useRunAgent } from '#modules/runs/hooks/useRunAgent.ts';
 import { extractOutput, formatLog, isArtifact } from '#modules/runs/utils.ts';
 import { isNotNull } from '#utils/helpers.ts';
 
-import { SEQUENTIAL_WORKFLOW_AGENT_NAME, SEQUENTIAL_WORKFLOW_AGENTS_URL_PARAM } from '../sequential/constants';
+import { SEQUENTIAL_WORKFLOW_AGENT_NAME } from '../sequential/constants';
 import type { ComposeMessagePart } from '../types';
 import type { ComposeStep, SequentialFormValues } from './compose-context';
 import { ComposeContext, ComposeStatus } from './compose-context';
 
 export function ComposeProvider({ children }: PropsWithChildren) {
-  const { data: availableAgents } = useListAgents();
-  const [searchParams, setSearchParams] = useSearchParams();
+  // TODO: switch to nextjs
+  // const { data: availableAgents } = useListAgents();
+  // const [searchParams, setSearchParams] = useSearchParams();
   const errorHandler = useHandleError();
 
   const { handleSubmit, getValues, setValue, watch } = useFormContext<SequentialFormValues>();
@@ -45,40 +43,39 @@ export function ComposeProvider({ children }: PropsWithChildren) {
 
   const { data: sequentialAgent } = useAgent({ name: SEQUENTIAL_WORKFLOW_AGENT_NAME });
 
-  const previousSteps = usePrevious(steps);
-
   const lastStep = steps.at(-1);
   const result = useMemo(() => lastStep?.result, [lastStep]);
 
   let lastAgentIdx = 0;
 
-  useEffect(() => {
-    if (!availableAgents || steps.length === previousSteps.length) return;
+  // const previousSteps = usePrevious(steps);
+  // useEffect(() => {
+  //   if (!availableAgents || steps.length === previousSteps.length) return;
 
-    setSearchParams((searchParams) => {
-      searchParams.set(SEQUENTIAL_WORKFLOW_AGENTS_URL_PARAM, steps.map(({ agent }) => agent.name).join(','));
-      return searchParams;
-    });
-  }, [availableAgents, previousSteps.length, setSearchParams, steps]);
+  //   setSearchParams((searchParams) => {
+  //     searchParams.set(SEQUENTIAL_WORKFLOW_AGENTS_URL_PARAM, steps.map(({ agent }) => agent.name).join(','));
+  //     return searchParams;
+  //   });
+  // }, [availableAgents, previousSteps.length, setSearchParams, steps]);
 
-  useEffect(() => {
-    if (!availableAgents) return;
+  // useEffect(() => {
+  //   if (!availableAgents) return;
 
-    const agentNames = searchParams
-      .get(SEQUENTIAL_WORKFLOW_AGENTS_URL_PARAM)
-      ?.split(',')
-      .filter((item) => item.length);
-    if (agentNames?.length && !steps.length) {
-      replaceSteps(
-        agentNames
-          .map((name) => {
-            const agent = availableAgents.find((agent) => name === agent.name);
-            return agent ? { agent, instruction: '' } : null;
-          })
-          .filter(isNotNull),
-      );
-    }
-  }, [availableAgents, replaceSteps, searchParams, steps.length]);
+  //   const agentNames = searchParams
+  //     .get(SEQUENTIAL_WORKFLOW_AGENTS_URL_PARAM)
+  //     ?.split(',')
+  //     .filter((item) => item.length);
+  //   if (agentNames?.length && !steps.length) {
+  //     replaceSteps(
+  //       agentNames
+  //         .map((name) => {
+  //           const agent = availableAgents.find((agent) => name === agent.name);
+  //           return agent ? { agent, instruction: '' } : null;
+  //         })
+  //         .filter(isNotNull),
+  //     );
+  //   }
+  // }, [availableAgents, replaceSteps, searchParams, steps.length]);
 
   const { isPending, runAgent, stopAgent, reset } = useRunAgent({
     onMessagePart: (event) => {

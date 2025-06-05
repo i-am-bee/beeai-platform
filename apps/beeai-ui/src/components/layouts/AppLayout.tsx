@@ -14,20 +14,20 @@
  * limitations under the License.
  */
 
-import { Outlet } from 'react-router';
+import type { PropsWithChildren } from 'react';
 
 import { AppHeader } from '#components/AppHeader/AppHeader.tsx';
 import { AgentDetailPanel } from '#modules/agents/components/AgentDetailPanel.tsx';
 
 import classes from './AppLayout.module.scss';
 
-export function AppLayout() {
+export function AppLayout({ children }: PropsWithChildren) {
   return (
     <div className={classes.root}>
       <AppHeader className={classes.header} />
 
       <main className={classes.main} data-transition>
-        <Outlet />
+        {children}
 
         <AgentDetailPanel />
       </main>

@@ -63,7 +63,7 @@ export function ComposeLanding() {
         </ul>
 
         <div className={classes.actionBar}>
-          <TransitionLink href={selected.route} asChild>
+          <TransitionLink href={selected.route ?? ''}>
             <Button renderIcon={ArrowRight} href={selected.route} className={classes.startBtn}>
               Start composing
             </Button>

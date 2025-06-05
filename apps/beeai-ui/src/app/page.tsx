@@ -14,24 +14,23 @@
  * limitations under the License.
  */
 
-import { ArrowRight } from '@carbon/icons-react';
-import { Button } from '@carbon/react';
+import { notFound, redirect } from 'next/navigation';
 
-import { ErrorPage } from '#components/ErrorPage/ErrorPage.tsx';
-import { MainContent } from '#components/layouts/MainContent.tsx';
-import { TransitionLink } from '#components/TransitionLink/TransitionLink.tsx';
+import { listAgents } from '#modules/agents/api/index.ts';
 import { routes } from '#utils/router.ts';
 
-export function NotFound() {
-  return (
-    <MainContent>
-      <ErrorPage
-        renderButton={({ className }) => (
-          <Button as={TransitionLink} href={routes.home()} renderIcon={ArrowRight} className={className}>
-            Buzz back to safety!
-          </Button>
-        )}
-      />
-    </MainContent>
-  );
+export default async function LandingPage() {
+  try {
+    const response = await listAgents();
+    const firstAgentName = response?.agents.at(0)?.name;
+
+    if (firstAgentName) {
+      redirect(routes.agentRun({ name: firstAgentName }));
+    }
+  } catch (err) {
+    // TODO:
+    console.log(err);
+  }
+
+  return notFound();
 }

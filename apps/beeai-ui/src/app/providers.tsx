@@ -15,12 +15,17 @@
  */
 
 'use client';
-import { ThemeProvider } from '@i-am-bee/beeai-ui';
 import { QueryClientProvider } from '@tanstack/react-query';
-import { PropsWithChildren } from 'react';
+import type { PropsWithChildren } from 'react';
 
-import { ProgressBarProvider } from '../../../beeai-ui/src/contexts/ProgressBar/ProgressBarProvider';
-import { RouteTransitionProvider } from '../../../beeai-ui/src/contexts/TransitionContext/RouteTransitionProvider';
+import { AppProvider } from '#contexts/App/AppProvider.tsx';
+import { AppConfigProvider } from '#contexts/AppConfig/AppConfigProvider.tsx';
+import { ModalProvider } from '#contexts/Modal/ModalProvider.tsx';
+import { ProgressBarProvider } from '#contexts/ProgressBar/ProgressBarProvider.tsx';
+import { ThemeProvider } from '#contexts/Theme/ThemeProvider.tsx';
+import { ToastProvider } from '#contexts/Toast/ToastProvider.tsx';
+import { RouteTransitionProvider } from '#contexts/TransitionContext/RouteTransitionProvider.tsx';
+
 import { getQueryClient } from './get-query-client';
 
 export default function Providers({ children }: PropsWithChildren) {
@@ -30,7 +35,15 @@ export default function Providers({ children }: PropsWithChildren) {
     <QueryClientProvider client={queryClient}>
       <ProgressBarProvider>
         <ThemeProvider>
-          <RouteTransitionProvider>{children}</RouteTransitionProvider>
+          <RouteTransitionProvider>
+            <ToastProvider>
+              <ModalProvider>
+                <AppConfigProvider>
+                  <AppProvider>{children}</AppProvider>
+                </AppConfigProvider>
+              </ModalProvider>
+            </ToastProvider>
+          </RouteTransitionProvider>
         </ThemeProvider>
       </ProgressBarProvider>
     </QueryClientProvider>

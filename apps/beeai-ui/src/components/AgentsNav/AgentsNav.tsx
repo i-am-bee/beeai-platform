@@ -16,10 +16,10 @@
 
 import { Button, ButtonSkeleton } from '@carbon/react';
 import clsx from 'clsx';
-import { useLocation } from 'react-router';
+import { usePathname } from 'next/navigation';
 
 import { SkeletonItems } from '#components/SkeletonItems/SkeletonItems.tsx';
-import { useViewTransition } from '#hooks/useViewTransition.ts';
+import { useRouteTransition } from '#contexts/TransitionContext/index.ts';
 import { useListAgents } from '#modules/agents/api/queries/useListAgents.ts';
 import { getAgentDisplayName, isAgentUiSupported, sortAgentsByName } from '#modules/agents/utils.ts';
 import { routes } from '#utils/router.ts';
@@ -27,8 +27,8 @@ import { routes } from '#utils/router.ts';
 import classes from './AgentsNav.module.scss';
 
 export function AgentsNav() {
-  const { pathname } = useLocation();
-  const { transitionTo } = useViewTransition();
+  const pathname = usePathname();
+  const { transitionTo } = useRouteTransition();
 
   const { data, isPending } = useListAgents();
   const agents = data?.filter(isAgentUiSupported).sort(sortAgentsByName);

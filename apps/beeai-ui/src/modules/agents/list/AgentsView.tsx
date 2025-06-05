@@ -70,7 +70,7 @@ export function AgentsView() {
 }
 
 const renderAgentTitle = ({ className, agent }: { className: string; agent: Agent }) => {
-  const route = routes.agentDetail({ name: agent.name });
+  const route = routes.agentRun({ name: agent.name });
   return (
     <TransitionLink className={className} href={route}>
       {agent.name}

@@ -14,28 +14,26 @@
  * limitations under the License.
  */
 
-import { useNavigate, useParams } from 'react-router';
+'use client';
 
-import { Container } from '#components/layouts/Container.tsx';
+import { ArrowRight } from '@carbon/icons-react';
+import { Button } from '@carbon/react';
+
+import { ErrorPage } from '#components/ErrorPage/ErrorPage.tsx';
 import { MainContent } from '#components/layouts/MainContent.tsx';
-import { AgentDetailView } from '#modules/agents/detail/AgentDetailView.tsx';
-import type { AgentPageParams } from '#modules/agents/types.ts';
+import { TransitionLink } from '#components/TransitionLink/TransitionLink.tsx';
 import { routes } from '#utils/router.ts';
 
-export function Agent() {
-  const { agentName } = useParams<AgentPageParams>();
-  const navigate = useNavigate();
-
-  if (!agentName) {
-    navigate(routes.notFound(), { replace: true });
-    return null;
-  }
-
+export default function NotFoundPage() {
   return (
     <MainContent>
-      <Container>
-        <AgentDetailView name={agentName} />
-      </Container>
+      <ErrorPage
+        renderButton={({ className }) => (
+          <Button as={TransitionLink} href={routes.home()} renderIcon={ArrowRight} className={className}>
+            Buzz back to safety!
+          </Button>
+        )}
+      />
     </MainContent>
   );
 }

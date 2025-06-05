@@ -14,16 +14,15 @@
  * limitations under the License.
  */
 
-import './styles/style.scss';
+import { usePathname } from 'next/navigation';
 
-import { StrictMode } from 'react';
-import { createRoot } from 'react-dom/client';
+export function useAgentNameFromPath() {
+  const pathname = usePathname();
+  const parts = pathname?.split('/');
 
-// Needs to be after style.scss
-import { App } from './App';
+  if (parts?.at(1) === 'agents') {
+    return parts.at(2);
+  }
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <App />
-  </StrictMode>,
-);
+  return null;
+}

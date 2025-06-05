@@ -14,8 +14,11 @@
  * limitations under the License.
  */
 
-/// <reference types="./@types/svg" />
-/// <reference types="vite/client" />
+import type { ApiErrorCode, ApiErrorResponse } from './types';
 
-declare const __APP_NAME__: string;
-declare const __PHOENIX_SERVER_TARGET__: string;
+export function createApiErrorResponse(code: ApiErrorCode, message?: string): ApiErrorResponse {
+  return {
+    code,
+    message: message ?? 'Error',
+  };
+}

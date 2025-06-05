@@ -14,6 +14,16 @@
  * limitations under the License.
  */
 
+export const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME ?? 'BeeAI';
+
+export const APP_FAVICON_SVG = process.env.NEXT_PUBLIC_APP_FAVICON_SVG ?? '/bee.svg';
+
+export const PHOENIX_SERVER_TARGET = process.env.PHOENIX_SERVER_TARGET;
+
+export const API_URL = process.env.API_URL;
+
+export const PROD_MODE = process.env.PROD;
+
 export const GITHUB_REPO_LINK = 'https://github.com/i-am-bee/beeai';
 
 export const FRAMEWORK_GITHUB_REPO_LINK = 'https://github.com/i-am-bee/beeai-framework';
