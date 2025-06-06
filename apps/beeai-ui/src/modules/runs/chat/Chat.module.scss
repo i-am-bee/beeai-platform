@@ -26,7 +26,10 @@
 .holder {
   display: grid;
   grid-template-rows: max-content 1fr max-content;
-  row-gap: $spacing-06;
+
+  > *:not(:last-child) {
+    margin-block-end: $spacing-06;
+  }
 }
 
 .header {

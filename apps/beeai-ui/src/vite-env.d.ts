@@ -20,3 +20,4 @@
 declare const __APP_NAME__: string;
 declare const __NAV__: object;
 declare const __PHOENIX_SERVER_TARGET__: string;
+declare const __SIDEBAR_VARIANT__: string;

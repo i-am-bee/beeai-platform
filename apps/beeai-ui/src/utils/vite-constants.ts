@@ -23,3 +23,5 @@ export const NAV = parseNav(__NAV__);
 export const PHOENIX_SERVER_TARGET = __PHOENIX_SERVER_TARGET__;
 
 export const PROD_MODE = import.meta.env.PROD;
+
+export const SIDEBAR_VARIANT = __SIDEBAR_VARIANT__;

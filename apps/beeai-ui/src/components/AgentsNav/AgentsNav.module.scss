@@ -54,3 +54,12 @@
     background-color: $layer-02;
   }
 }
+
+.root.toggleBelowHeader {
+  padding-block-start: rem(48px);
+
+  .heading {
+    border-block-start: rem(1px) solid $border-subtle-00;
+    padding-block-start: rem(16px);
+  }
+}

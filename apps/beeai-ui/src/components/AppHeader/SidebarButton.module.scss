@@ -33,3 +33,28 @@
   font-weight: 600;
   color: $text-dark;
 }
+
+.root.belowHeader {
+  position: relative;
+  z-index: 2;
+  margin-inline-start: 0;
+
+  button {
+    padding: rem(6px);
+    block-size: rem(32px);
+    background: $background;
+
+    &.selected {
+      background: $layer-accent-01;
+    }
+
+    &:not(.selected) {
+      padding-inline-start: rem(32px);
+    }
+
+    svg {
+      inset-block-start: rem(7px);
+      inset-inline-start: rem(8px);
+    }
+  }
+}

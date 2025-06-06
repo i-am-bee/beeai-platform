@@ -35,3 +35,11 @@
 .name {
   @include line-clamp();
 }
+
+div#fixedRoot {
+  margin-block-end: 0;
+
+  &.spacing {
+    block-size: 1.5rem;
+  }
+}

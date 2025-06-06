@@ -15,9 +15,14 @@
  */
 
 import { Menu } from '@carbon/icons-react';
-import { IconButton } from '@carbon/react';
+import { Button, IconButton } from '@carbon/react';
+import clsx from 'clsx';
+import { useParams } from 'react-router';
 
 import { useApp } from '#contexts/App/index.ts';
+import { useAgent } from '#modules/agents/api/queries/useAgent.ts';
+import type { AgentPageParams } from '#modules/agents/types.ts';
+import { getAgentDisplayName } from '#modules/agents/utils.ts';
 import { APP_NAME } from '#utils/vite-constants.ts';
 
 import classes from './SidebarButton.module.scss';
@@ -40,5 +45,31 @@ export function SidebarButton() {
 
       <span className={classes.label}>{APP_NAME}</span>
     </div>
+  );
+}
+
+export function SidebarButtonWAgentName() {
+  const { agentName } = useParams<AgentPageParams>();
+  const { data: agent } = useAgent({ name: agentName ?? '' });
+  const { setNavigationOpen, navigationOpen } = useApp();
+
+  return agent ? (
+    <div className={clsx(classes.root, classes.belowHeader)}>
+      <div className={classes.button}>
+        <Button
+          kind={navigationOpen ? 'ghost' : 'tertiary'}
+          size="sm"
+          renderIcon={Menu}
+          hasIconOnly={navigationOpen}
+          className={clsx(navigationOpen && classes.selected)}
+          onClick={() => setNavigationOpen?.((value) => !value)}
+          iconDescription="Toggle sidebar"
+        >
+          {getAgentDisplayName(agent)}
+        </Button>
+      </div>
+    </div>
+  ) : (
+    <SidebarButton />
   );
 }

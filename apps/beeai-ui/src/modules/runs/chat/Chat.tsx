@@ -79,14 +79,13 @@ export function Chat() {
   return (
     <div className={clsx(classes.root, { [classes.isNew]: isNew })}>
       <Container size="sm" className={classes.holder}>
-        {isNew ? (
+        {isNew && (
           <div className={classes.header}>
             <AgentIcon size="xl" />
             <AgentGreeting agent={agent} />
           </div>
-        ) : (
-          <AgentHeader className={classes.header} onNewSessionClick={onClear} />
         )}
+        <AgentHeader className={classes.header} onNewSessionClick={onClear} hideButton={isNew} />
 
         {!isNew && (
           <div className={classes.content} ref={scrollRef}>

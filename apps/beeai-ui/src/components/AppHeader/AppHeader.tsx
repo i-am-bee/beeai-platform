@@ -21,7 +21,7 @@ import { MainNav } from '#components/layouts/MainNav.tsx';
 import { useAgent } from '#modules/agents/api/queries/useAgent.ts';
 import type { AgentPageParams } from '#modules/agents/types.ts';
 import { getAgentDisplayName } from '#modules/agents/utils.ts';
-import { NAV } from '#utils/vite-constants.ts';
+import { APP_NAME, NAV, SIDEBAR_VARIANT } from '#utils/vite-constants.ts';
 
 import { Container } from '../layouts/Container';
 import { AgentDetailButton } from './AgentDetailButton';
@@ -35,18 +35,21 @@ interface Props {
 export function AppHeader({ className }: Props) {
   const { agentName } = useParams<AgentPageParams>();
   const { data: agent } = useAgent({ name: agentName ?? '' });
+  const toggleBelowHeader = SIDEBAR_VARIANT === 'toggle-below-header';
 
   return (
     <header className={clsx(classes.root, className)}>
       <Container size="full">
         <div className={clsx(classes.holder, { [classes.hasNav]: NAV.length > 0 })}>
-          <MainNav />
+          {toggleBelowHeader && agent ? <span className={classes.appName}>{APP_NAME}</span> : <MainNav />}
 
           {NAV.length > 0 && <AppHeaderNav items={NAV} />}
           {!NAV.length && agent && (
             <>
               <p className={classes.agentName}>{getAgentDisplayName(agent)}</p>
-              <AgentDetailButton />
+              <div className={classes.alignEnd}>
+                <AgentDetailButton />
+              </div>
             </>
           )}
         </div>

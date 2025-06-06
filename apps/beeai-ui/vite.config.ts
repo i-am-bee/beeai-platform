@@ -10,12 +10,13 @@ import { loadFile } from './src/utils/files/loadFile';
 const DEFAULT_ENV = {
   VITE_APP_NAME: 'BeeAI',
   VITE_APP_FAVICON_SVG: '/bee.svg',
+  VITE_APP_SIDEBAR_VARIANT: 'toggle-in-header',
   VITE_API_SERVER_TARGET: 'http://localhost:8333',
   VITE_PHOENIX_SERVER_TARGET: 'http://localhost:6006',
 } as const;
 
 export default defineConfig(async ({ mode }): Promise<UserConfig> => {
-  const { VITE_APP_NAME, VITE_APP_FAVICON_SVG, VITE_API_SERVER_TARGET, VITE_PHOENIX_SERVER_TARGET } = {
+  const { VITE_APP_NAME, VITE_APP_FAVICON_SVG, VITE_APP_SIDEBAR_VARIANT, VITE_API_SERVER_TARGET, VITE_PHOENIX_SERVER_TARGET } = {
     ...DEFAULT_ENV,
     ...loadEnv(mode, process.cwd()),
   };
@@ -37,6 +38,7 @@ export default defineConfig(async ({ mode }): Promise<UserConfig> => {
       __APP_NAME__: JSON.stringify(VITE_APP_NAME),
       __NAV__: await loadFile(import.meta.url, 'nav.json'),
       __PHOENIX_SERVER_TARGET__: JSON.stringify(VITE_PHOENIX_SERVER_TARGET),
+      __SIDEBAR_VARIANT__: JSON.stringify(VITE_APP_SIDEBAR_VARIANT),
     },
     server: {
       proxy: {

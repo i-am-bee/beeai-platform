@@ -18,7 +18,7 @@ import { type RefObject, useRef } from 'react';
 import { useOnClickOutside } from 'usehooks-ts';
 
 import { AgentsNav } from '#components/AgentsNav/AgentsNav.tsx';
-import { SidebarButton } from '#components/AppHeader/SidebarButton.tsx';
+import { SidebarButton, SidebarButtonWAgentName } from '#components/AppHeader/SidebarButton.tsx';
 import { SidePanel } from '#components/SidePanel/SidePanel.tsx';
 import { UserNav } from '#components/UserNav/UserNav.tsx';
 import { useApp } from '#contexts/App/index.ts';
@@ -26,7 +26,11 @@ import { useAppConfig } from '#contexts/AppConfig/index.ts';
 
 import classes from './MainNav.module.scss';
 
-export function MainNav() {
+interface Props {
+  toggleBelowHeader?: boolean;
+}
+
+export function MainNav({ toggleBelowHeader }: Props) {
   const { navigationOpen } = useApp();
   const { featureFlags } = useAppConfig();
   const { closeNavOnClickOutside, setNavigationOpen } = useApp();
@@ -40,11 +44,11 @@ export function MainNav() {
 
   return (
     <div ref={navRef}>
-      <SidebarButton />
+      {toggleBelowHeader ? <SidebarButtonWAgentName /> : <SidebarButton />}
 
       <SidePanel variant="left" isOpen={navigationOpen}>
         <div className={classes.root}>
-          <AgentsNav />
+          <AgentsNav toggleBelowHeader={toggleBelowHeader} />
 
           {featureFlags?.user_navigation && (
             <div className={classes.footer}>

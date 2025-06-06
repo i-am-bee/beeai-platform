@@ -36,6 +36,17 @@ Example:
 
 For more details, see the [schema](./src/modules/nav/schema.ts).
 
+
 ## ENV
 
 See [`.env.example`](./.env.example).
+
+
+## Sidebar toggle position
+
+By default, the hamburger menu used to toggle the sidebar is located in the header.
+Its position can be configured using `VITE_APP_SIDEBAR_VARIANT` variable in `.env` file.
+
+Two options are currently supported.
+- `toggle-in-header` (default): Displays the hamburger menu inside the header, next to the app name.
+- `toggle-below-header`: Displays the hamburger menu below the header with the agent name. The new session button appears next to the menu.

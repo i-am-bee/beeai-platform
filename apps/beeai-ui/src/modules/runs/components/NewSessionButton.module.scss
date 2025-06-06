@@ -14,37 +14,28 @@
  * limitations under the License.
  */
 
-.root {
-  position: sticky;
-  inset-block-start: 0;
-  background-color: $background;
-  border-block-end: 1px solid $border-subtle-00;
+.fixed {
+  position: fixed;
+  inset-block-start: rem(80px);
+  inset-inline-start: 0;
+  padding-inline: $spacing-05;
+  display: flex;
+  justify-content: flex-start;
+  column-gap: rem(8px);
   z-index: 1;
 }
 
-.holder {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  column-gap: $gap;
-  align-items: center;
-  block-size: rem(56px);
-  .alignEnd {
-    text-align: end;
-  }
-
-  &.hasNav {
-    grid-template-columns: auto 1fr;
-  }
+.navOpen.fixed {
+  inline-size: 100%;
+  max-inline-size: rem(272px);
+  justify-content: space-between;
 }
 
-.agentName {
-  font-size: rem(14px);
-  line-height: math.div(20, 14);
-}
+.button {
+  position: relative;
+  z-index: 2;
 
-.appName {
-  font-size: rem(14px);
-  line-height: math.div(18, 14);
-  font-weight: 600;
-  color: $text-dark;
+  button {
+    background-color: $background;
+  }
 }

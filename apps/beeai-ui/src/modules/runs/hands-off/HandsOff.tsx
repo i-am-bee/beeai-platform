@@ -38,7 +38,7 @@ export function HandsOff() {
       <div className={clsx(classes.root, { [classes.isPendingOrOutput]: isPendingOrOutput })}>
         <div className={classes.holder}>
           <div className={classes.header}>
-            <AgentHeader agent={agent} onNewSessionClick={isPendingOrOutput ? onClear : undefined} />
+            <AgentHeader agent={agent} onNewSessionClick={onClear} hideButton={!isPendingOrOutput} />
 
             {isCompleted ? (
               <h2 className={classes.heading}>Task input:</h2>

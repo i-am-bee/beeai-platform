@@ -26,7 +26,11 @@ import { routes } from '#utils/router.ts';
 
 import classes from './AgentsNav.module.scss';
 
-export function AgentsNav() {
+interface Props {
+  toggleBelowHeader?: boolean;
+}
+
+export function AgentsNav({ toggleBelowHeader }: Props) {
   const { pathname } = useLocation();
   const { transitionTo } = useViewTransition();
 
@@ -34,8 +38,8 @@ export function AgentsNav() {
   const agents = data?.filter(isAgentUiSupported).sort(sortAgentsByName);
 
   return (
-    <nav className={classes.root}>
-      <h2 className={classes.heading}>Agents</h2>
+    <nav className={clsx(classes.root, toggleBelowHeader && classes.toggleBelowHeader)}>
+      <h2 className={classes.heading}>{toggleBelowHeader ? 'Try an Agent' : 'Agents'}</h2>
 
       <ul className={classes.list}>
         {!isPending ? (

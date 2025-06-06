@@ -14,23 +14,35 @@
  * limitations under the License.
  */
 
-import { IconButton } from '@carbon/react';
 import clsx from 'clsx';
 
 import type { Agent } from '#modules/agents/api/types.ts';
 import { getAgentDisplayName } from '#modules/agents/utils.ts';
+import { SIDEBAR_VARIANT } from '#utils/vite-constants.ts';
 
 import { AgentIcon } from '../components/AgentIcon';
 import classes from './AgentHeader.module.scss';
-import NewSession from './NewSession.svg';
+import { NewSessionButton } from './NewSessionButtton';
 
 interface Props {
   agent?: Agent;
   onNewSessionClick?: () => void;
   className?: string;
+  hideButton?: boolean;
 }
 
-export function AgentHeader({ agent, onNewSessionClick, className }: Props) {
+export function AgentHeader({ agent, onNewSessionClick, className, hideButton }: Props) {
+  const sidebarToggleBelowHeader = SIDEBAR_VARIANT === 'toggle-below-header';
+
+  if (sidebarToggleBelowHeader)
+    return (
+      <div className={clsx(agent && classes.spacing)} id={classes.fixedRoot}>
+        {onNewSessionClick && <NewSessionButton onNewSessionClick={onNewSessionClick} fixed />}
+      </div>
+    );
+
+  if (!agent && hideButton) return null;
+
   return (
     <header className={clsx(classes.root, className)}>
       <div>
@@ -43,11 +55,7 @@ export function AgentHeader({ agent, onNewSessionClick, className }: Props) {
         )}
       </div>
 
-      {onNewSessionClick && (
-        <IconButton kind="tertiary" size="sm" label="New session" align="left" autoAlign onClick={onNewSessionClick}>
-          <NewSession />
-        </IconButton>
-      )}
+      {!hideButton && onNewSessionClick && <NewSessionButton onNewSessionClick={onNewSessionClick} />}
     </header>
   );
 }
