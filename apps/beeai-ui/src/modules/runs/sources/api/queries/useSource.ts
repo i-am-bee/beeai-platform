@@ -14,32 +14,24 @@
  * limitations under the License.
  */
 
-.root {
-  z-index: z('modal');
+import { useQuery } from '@tanstack/react-query';
+
+import { readSourceMetadata } from '..';
+import { sourceKeys } from '../keys';
+import type { SourceReference } from '../types';
+
+interface Params {
+  source: SourceReference;
 }
 
-.content {
-  @include type-style(label-02);
-  background-color: $background-inverse;
-  color: $text-inverse;
-  border-radius: $border-radius;
-  max-inline-size: rem(264px);
+export function useSource({ source }: Params) {
+  const query = useQuery({
+    queryKey: sourceKeys.detail({ source }),
+    queryFn: async () => ({
+      ...source,
+      metadata: await readSourceMetadata({ url: source.url }),
+    }),
+  });
 
-  .root.sm & {
-    padding: $spacing-02 $spacing-03;
-  }
-  .root.md & {
-    padding: $spacing-04 $spacing-05;
-  }
-  .root.lg & {
-    padding: $spacing-04;
-    max-inline-size: rem(294px);
-  }
-  a {
-    color: $link-inverse;
-  }
-}
-
-.arrow {
-  fill: $background-inverse;
+  return query;
 }

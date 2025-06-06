@@ -14,50 +14,7 @@
  * limitations under the License.
  */
 
-$avatar-padding-left: $spacing-04 + rem(32px);
-
 .root {
   display: flex;
   flex-direction: column;
-  gap: $spacing-02;
-}
-
-.sender {
-  display: flex;
-  align-items: center;
-  gap: $spacing-04;
-
-  .senderIcon {
-    inline-size: rem(32px);
-  }
-  .senderName {
-    color: $text-secondary;
-    font-size: rem(12px);
-    line-height: math.div(16, 12);
-  }
-}
-
-.body {
-  display: flex;
-  flex-direction: column;
-  row-gap: $spacing-03;
-  padding-inline-start: $avatar-padding-left;
-}
-
-.content {
-  font-size: rem(16px);
-  line-height: math.div(26, 16);
-
-  > div {
-    font-size: inherit;
-    line-height: inherit;
-  }
-
-  &.isUser {
-    @include font-family(serif);
-  }
-}
-
-.empty {
-  color: $text-disabled;
 }

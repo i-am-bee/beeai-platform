@@ -14,32 +14,17 @@
  * limitations under the License.
  */
 
-.root {
-  z-index: z('modal');
+export interface SourceReference {
+  number: number;
+  url: string;
 }
 
-.content {
-  @include type-style(label-02);
-  background-color: $background-inverse;
-  color: $text-inverse;
-  border-radius: $border-radius;
-  max-inline-size: rem(264px);
-
-  .root.sm & {
-    padding: $spacing-02 $spacing-03;
-  }
-  .root.md & {
-    padding: $spacing-04 $spacing-05;
-  }
-  .root.lg & {
-    padding: $spacing-04;
-    max-inline-size: rem(294px);
-  }
-  a {
-    color: $link-inverse;
-  }
+export interface SourceMetadata {
+  title: string;
+  description?: string;
+  faviconUrl?: string;
 }
 
-.arrow {
-  fill: $background-inverse;
+export interface ResolvedSource extends SourceReference {
+  metadata: SourceMetadata;
 }

@@ -14,32 +14,16 @@
  * limitations under the License.
  */
 
-.root {
-  z-index: z('modal');
-}
+import type { SourceMetadata } from './types';
 
-.content {
-  @include type-style(label-02);
-  background-color: $background-inverse;
-  color: $text-inverse;
-  border-radius: $border-radius;
-  max-inline-size: rem(264px);
+// TODO:
+export async function readSourceMetadata({ url }: { url: string }): Promise<SourceMetadata> {
+  const title: string | undefined = 'beeai-platform: Discover, run, and compose AI';
 
-  .root.sm & {
-    padding: $spacing-02 $spacing-03;
-  }
-  .root.md & {
-    padding: $spacing-04 $spacing-05;
-  }
-  .root.lg & {
-    padding: $spacing-04;
-    max-inline-size: rem(294px);
-  }
-  a {
-    color: $link-inverse;
-  }
-}
-
-.arrow {
-  fill: $background-inverse;
+  return {
+    title: title ?? url,
+    description:
+      'Orchestrate agents into workflows — regardless of how or where they were built . Key features. Feature, Description. ACP Native, Built from the ground.',
+    faviconUrl: 'https://github.githubassets.com/favicons/favicon.svg',
+  };
 }

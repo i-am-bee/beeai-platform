@@ -14,32 +14,10 @@
  * limitations under the License.
  */
 
-.root {
-  z-index: z('modal');
-}
+import type { SourceReference } from './types';
 
-.content {
-  @include type-style(label-02);
-  background-color: $background-inverse;
-  color: $text-inverse;
-  border-radius: $border-radius;
-  max-inline-size: rem(264px);
-
-  .root.sm & {
-    padding: $spacing-02 $spacing-03;
-  }
-  .root.md & {
-    padding: $spacing-04 $spacing-05;
-  }
-  .root.lg & {
-    padding: $spacing-04;
-    max-inline-size: rem(294px);
-  }
-  a {
-    color: $link-inverse;
-  }
-}
-
-.arrow {
-  fill: $background-inverse;
-}
+export const sourceKeys = {
+  all: () => ['sources'] as const,
+  details: () => [...sourceKeys.all(), 'detail'] as const,
+  detail: ({ source }: { source: SourceReference }) => [...sourceKeys.details(), { source }] as const,
+};
