@@ -41,11 +41,6 @@ def test_configuration():
     return TestConfiguration()
 
 
-print("\n\nRunning with configuration:")
-pprint(TestConfiguration().model_dump())
-print()
-
-
 async def _get_kr8s_client():
     api = await kr8s.asyncio.api(namespace="beeai")
     kubeconfig = api.auth.kubeconfig
@@ -57,6 +52,13 @@ async def _get_kr8s_client():
             f"expected: {kubeconfig_regex}"
         )
     return api
+
+
+def pytest_configure(config):
+    if "e2e" in config.getoption("markexpr"):
+        print("\n\nRunning with configuration:")
+        pprint(TestConfiguration().model_dump())
+        print()
 
 
 def pytest_sessionstart(session):
