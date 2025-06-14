@@ -20,6 +20,7 @@ import { Button } from '@carbon/react';
 import { Spinner } from '#components/Spinner/Spinner.tsx';
 
 import { ElapsedTime } from '../components/ElapsedTime';
+import { useAgent } from '../contexts/agent';
 import { useHandsOff } from '../contexts/hands-off';
 import classes from './TaskStatusBar.module.scss';
 
@@ -29,13 +30,22 @@ interface Props {
 
 export function TaskStatusBar({ onStopClick }: Props) {
   const { stats, isPending } = useHandsOff();
+  const {
+    status: { isNotInstalled, isStarting },
+  } = useAgent();
 
   return stats?.startTime ? (
     <div className={classes.root}>
       <div className={classes.label}>
         {isPending && <Spinner center />}
         <span>
-          Task {isPending ? 'running for' : 'completed in'} <ElapsedTime stats={stats} />
+          {isNotInstalled || isStarting ? (
+            'Starting the agent, please bee patient...'
+          ) : (
+            <>
+              Task {isPending ? 'running for' : 'completed in'} <ElapsedTime stats={stats} />
+            </>
+          )}
         </span>
       </div>
 
