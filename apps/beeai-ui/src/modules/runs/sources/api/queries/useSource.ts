@@ -14,15 +14,24 @@
  * limitations under the License.
  */
 
-import clsx from 'clsx';
-import type { PropsWithChildren } from 'react';
+import { useQuery } from '@tanstack/react-query';
 
-import classes from './FileCardsList.module.scss';
+import { readSourceMetadata } from '..';
+import { sourceKeys } from '../keys';
+import type { SourceReference } from '../types';
 
-interface Props {
-  className?: string;
+interface Params {
+  source: SourceReference;
 }
 
-export function FileCardsList({ className, children }: PropsWithChildren<Props>) {
-  return <ul className={clsx(classes.root, className)}>{children}</ul>;
+export function useSource({ source }: Params) {
+  const query = useQuery({
+    queryKey: sourceKeys.detail({ source }),
+    queryFn: async () => ({
+      ...source,
+      metadata: await readSourceMetadata({ url: source.url }),
+    }),
+  });
+
+  return query;
 }

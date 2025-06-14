@@ -14,15 +14,22 @@
  * limitations under the License.
  */
 
-import clsx from 'clsx';
-import type { PropsWithChildren } from 'react';
-
-import classes from './FileCardsList.module.scss';
+import type { SourceReference } from '../api/types';
+import { InlineCitationButton } from './InlineCitationButton';
+import classes from './InlineCitations.module.scss';
 
 interface Props {
-  className?: string;
+  sources: SourceReference[];
 }
 
-export function FileCardsList({ className, children }: PropsWithChildren<Props>) {
-  return <ul className={clsx(classes.root, className)}>{children}</ul>;
+export function InlineCitations({ sources }: Props) {
+  return sources.length > 0 ? (
+    <span className={classes.root}>
+      {sources.map((source) => (
+        <sup key={source.number}>
+          <InlineCitationButton source={source} />
+        </sup>
+      ))}
+    </span>
+  ) : null;
 }

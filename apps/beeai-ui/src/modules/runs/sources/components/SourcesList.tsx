@@ -14,15 +14,22 @@
  * limitations under the License.
  */
 
-import clsx from 'clsx';
-import type { PropsWithChildren } from 'react';
-
-import classes from './FileCardsList.module.scss';
+import type { SourceReference } from '../api/types';
+import { Source } from './Source';
+import classes from './SourcesList.module.scss';
 
 interface Props {
-  className?: string;
+  sources: SourceReference[];
 }
 
-export function FileCardsList({ className, children }: PropsWithChildren<Props>) {
-  return <ul className={clsx(classes.root, className)}>{children}</ul>;
+export function SourcesList({ sources }: Props) {
+  return sources.length > 0 ? (
+    <ul className={classes.root}>
+      {sources.map((source) => (
+        <li key={source.number}>
+          <Source source={source} />
+        </li>
+      ))}
+    </ul>
+  ) : null;
 }

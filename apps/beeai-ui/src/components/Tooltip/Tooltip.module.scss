@@ -31,6 +31,10 @@
   .root.md & {
     padding: $spacing-04 $spacing-05;
   }
+  .root.lg & {
+    padding: $spacing-04;
+    max-inline-size: rem(294px);
+  }
   a {
     color: $link-inverse;
   }

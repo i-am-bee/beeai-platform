@@ -26,6 +26,7 @@ import { useChat } from '../contexts/chat';
 import { FileCard } from '../files/components/FileCard';
 import { FileCardsList } from '../files/components/FileCardsList';
 import { getFileContentUrl } from '../files/utils';
+import { SourcesButton } from '../sources/components/SourcesButton';
 import { Role } from '../types';
 import classes from './Message.module.scss';
 import { type ChatMessage, MessageStatus } from './types';
@@ -46,7 +47,11 @@ export function Message({ message }: Props) {
     isAssistantMessage && (message.status === MessageStatus.Failed || message.status === MessageStatus.Aborted);
   const isFailed = isAssistantMessage && message.status === MessageStatus.Failed;
 
-  const files = (isUserMessage ? message.files : undefined) ?? [];
+  const files = (isUserMessage ? message.files : null) ?? [];
+  const sources = (isAssistantMessage ? message.sources : null) ?? [];
+
+  const hasFiles = files.length > 0;
+  const hasSources = sources.length > 0;
 
   return (
     <li className={clsx(classes.root)}>
@@ -73,8 +78,8 @@ export function Message({ message }: Props) {
           </div>
         )}
 
-        {files.length > 0 && (
-          <FileCardsList>
+        {hasFiles && (
+          <FileCardsList className={classes.files}>
             {files.map(({ id, filename }) => {
               const href = id ? getFileContentUrl({ id }) : undefined;
 
@@ -86,6 +91,8 @@ export function Message({ message }: Props) {
             })}
           </FileCardsList>
         )}
+
+        {hasSources && <SourcesButton sources={sources} />}
       </div>
     </li>
   );
