@@ -48,6 +48,12 @@ telemetry:
   sharing: true
 ```
 
+<Note>
+**ArgoCD / GitOps Deployment**<br>
+When using ArgoCD, you cannot use the local config.yaml approach shown above. ArgoCD will not be able to access local files after the Helm chart is already remote.<br>
+Instead, configure all settings using helm set parameters directly in your ArgoCD Application configuration.
+</Note>
+
 ### Step 2: Install the Chart
 
 Then install the chart using:
