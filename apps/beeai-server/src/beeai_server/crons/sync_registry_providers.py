@@ -13,7 +13,6 @@
 # limitations under the License.
 
 import logging
-from asyncio import Task
 from datetime import timedelta
 
 
@@ -24,8 +23,6 @@ from beeai_server.utils.periodic import periodic
 from kink import inject, di
 
 logger = logging.getLogger(__name__)
-
-preinstall_background_tasks: dict[str, Task] = {}
 
 
 @periodic(period=timedelta(seconds=di[Configuration].agent_registry.sync_period_sec))

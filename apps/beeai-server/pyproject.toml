@@ -32,6 +32,8 @@ dependencies = [
     "sqlalchemy[asyncio]>=2.0.41",
     "aioboto3>=14.3.0",
     "pyjwt>=2.10.1",
+    "procrastinate>=3.2.2",
+    "sqlparse>=0.5.3",
 ]
 
 [tool.ruff]
