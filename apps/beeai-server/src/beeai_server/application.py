@@ -26,6 +26,8 @@ from acp_sdk.server.errors import (
 )
 from starlette.requests import Request
 
+from beeai_server.run_workers import run_workers_lifespan
+from beeai_server.jobs.procrastinate import create_app
 from beeai_server.utils.fastapi import NoCacheStaticFiles
 from fastapi import FastAPI, APIRouter
 from fastapi import HTTPException
@@ -174,13 +176,23 @@ def app(*, dependency_overrides: Container | None = None, enable_crons: bool = T
     async def lifespan(_app: FastAPI):
         from beeai_server.utils.periodic import run_all_crons
 
-        register_telemetry()
+        try:
+            procrastinate_app = create_app()
 
-        async with run_all_crons() if enable_crons else nullcontext():
-            try:
-                yield
-            finally:
-                shutdown_telemetry()
+            register_telemetry()
+
+            async with (
+                run_all_crons() if enable_crons else nullcontext(),
+                procrastinate_app.open_async(),
+                run_workers_lifespan(app=procrastinate_app),
+            ):
+                try:
+                    yield
+                finally:
+                    shutdown_telemetry()
+        except Exception as e:
+            logger.error("Error during startup: %s", repr(extract_messages(e)))
+            raise
 
     app = FastAPI(
         lifespan=lifespan,

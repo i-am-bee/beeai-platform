@@ -16,6 +16,7 @@ import fastapi
 
 from beeai_server.configuration import UIFeatureFlags
 from beeai_server.api.dependencies import ConfigurationDependency
+from beeai_server.jobs.tasks.file import extract_text
 
 router = fastapi.APIRouter()
 
@@ -23,3 +24,11 @@ router = fastapi.APIRouter()
 @router.get("/config")
 def get_ui_config(config: ConfigurationDependency) -> UIFeatureFlags:
     return config.feature_flags.ui
+
+
+@router.get("/procrastinate/{text}")
+async def test_procrastinate(text: str):
+    try:
+        await extract_text.defer_async(text=text)
+    except Exception as e:
+        return {"error": str(e)}

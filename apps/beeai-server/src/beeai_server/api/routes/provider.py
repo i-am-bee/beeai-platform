@@ -41,16 +41,6 @@ async def create_provider(
     )
 
 
-@router.post("/register/unmanaged", deprecated=True)
-async def deprecated_create_unmanaged_provider(
-    _: AdminUserDependency,
-    request: CreateProviderRequest,
-    provider_service: ProviderServiceDependency,
-) -> ProviderWithState:
-    """Backward compatibility for ACP sdk."""
-    return await provider_service.create_provider(location=request.location, auto_remove=True)
-
-
 @router.post("/preview")
 async def preview_provider(
     request: CreateProviderRequest, provider_service: ProviderServiceDependency

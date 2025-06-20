@@ -68,7 +68,7 @@ class OCIRegistryConfiguration(BaseModel, extra="allow"):
 
 class AgentRegistryConfiguration(BaseModel):
     locations: dict[str, RegistryLocation] = Field(default_factory=dict)
-    sync_period_sec: int = Field(default=timedelta(minutes=10).total_seconds())
+    sync_period_cron: str = Field(default="*/10 * * * *") # every 10 minutes
 
 
 class AuthConfiguration(BaseModel):
@@ -101,6 +101,8 @@ class PersistenceConfiguration(BaseModel):
     encryption_key: Secret[str] | None = None
     finished_requests_remove_after_sec: int = timedelta(minutes=30).total_seconds()
     stale_requests_remove_after_sec: int = timedelta(hours=1).total_seconds()
+    vector_db_schema: str = Field("vector_db", pattern=r"^[a-zA-Z0-9_]+$")
+    procrastinate_schema: str = Field("procrastinate", pattern=r"^[a-zA-Z0-9_]+$")
 
 
 class TelemetryConfiguration(BaseModel):
