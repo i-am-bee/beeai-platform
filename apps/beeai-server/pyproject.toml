@@ -32,6 +32,8 @@ dependencies = [
     "sqlalchemy[asyncio]>=2.0.41",
     "aioboto3>=14.3.0",
     "pyjwt>=2.10.1",
+    "docling>=2.37.0",
+    "torch==2.7.1"
 ]
 
 [tool.ruff]
@@ -67,3 +69,11 @@ dev = [
 
 [tool.hatch.build.targets.wheel]
 artifacts = ["static/"]
+
+[tool.uv.sources]
+torch = { index = "pytorch" } 
+
+[[tool.uv.index]]
+name = "pytorch"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
