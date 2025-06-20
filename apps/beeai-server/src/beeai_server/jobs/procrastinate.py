@@ -4,7 +4,9 @@ import procrastinate
 from kink import inject
 
 from beeai_server.configuration import Configuration
-from beeai_server.service_layer.tasks.text_extraction import blueprint as text_extraction
+from beeai_server.jobs.tasks.file import blueprint as file_tasks
+from beeai_server.jobs.crons.provider import blueprint as provider_crons
+from beeai_server.jobs.crons.cleanup import blueprint as cleanup_crons
 
 
 @inject
@@ -19,5 +21,7 @@ def create_app(configuration: Configuration) -> procrastinate.App:
             },
         ),
     )
-    app.add_tasks_from(blueprint=text_extraction, namespace="text_extraction")
+    app.add_tasks_from(blueprint=file_tasks, namespace="text_extraction")
+    app.add_tasks_from(blueprint=provider_crons, namespace="cron_provider")
+    app.add_tasks_from(blueprint=cleanup_crons, namespace="cron_acp")
     return app

@@ -6,7 +6,7 @@ import procrastinate
 from kink import inject
 
 from beeai_server.configuration import Configuration
-from beeai_server.service_layer.tasks.procrastinate import create_app
+from beeai_server.jobs.procrastinate import create_app
 
 logger = logging.getLogger(__name__)
 

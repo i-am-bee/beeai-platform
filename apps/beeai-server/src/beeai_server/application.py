@@ -27,7 +27,7 @@ from acp_sdk.server.errors import (
 from starlette.requests import Request
 
 from beeai_server.run_workers import run_workers_lifespan
-from beeai_server.service_layer.tasks.procrastinate import create_app
+from beeai_server.jobs.procrastinate import create_app
 from beeai_server.utils.fastapi import NoCacheStaticFiles
 from fastapi import FastAPI, APIRouter
 from fastapi import HTTPException

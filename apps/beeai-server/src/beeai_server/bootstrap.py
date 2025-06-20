@@ -12,8 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import asyncio
-import concurrent.futures
 import logging
 from typing import TypeVar
 
@@ -32,6 +30,8 @@ from beeai_server.infrastructure.persistence.unit_of_work import SqlAlchemyUnitO
 from beeai_server.service_layer.unit_of_work import IUnitOfWorkFactory
 from beeai_server.utils.periodic import register_all_crons
 from kink import di, Container
+
+from beeai_server.utils.utils import async_to_sync_isolated
 
 logger = logging.getLogger(__name__)
 
@@ -78,7 +78,4 @@ async def bootstrap_dependencies(dependency_overrides: Container | None = None):
     register_all_crons()
 
 
-def bootstrap_dependencies_sync(dependency_overrides: Container | None = None):
-    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-        future = executor.submit(lambda: asyncio.run(bootstrap_dependencies(dependency_overrides)))
-        return future.result()
+bootstrap_dependencies_sync = async_to_sync_isolated(bootstrap_dependencies)
