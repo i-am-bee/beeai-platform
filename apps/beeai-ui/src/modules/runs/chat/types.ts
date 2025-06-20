@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import type { SourceReference } from '../sources/api/types';
 import type { Role } from '../types';
 
 interface Message {
@@ -28,13 +29,28 @@ export interface UserMessage extends Message {
 }
 export interface AssistantMessage extends Message {
   role: Role.Assistant;
+  rawContent: string;
+  contentTransforms: MessageContentTransform[];
   status: MessageStatus;
+  sources?: SourceReference[];
 }
 
 export interface MessageFile {
   key: string;
   filename: string;
   href: string;
+}
+
+export interface MessageContentTransform {
+  key: string;
+  kind: MessageContentTransformType;
+  startIndex: number;
+  apply: ({ content, offset }: { content: string; offset: number }) => string;
+}
+
+export interface CitationTransform extends MessageContentTransform {
+  kind: MessageContentTransformType.Citation;
+  sources: SourceReference[];
 }
 
 export type ChatMessage = UserMessage | AssistantMessage;
@@ -44,4 +60,9 @@ export enum MessageStatus {
   Completed = 'completed',
   Aborted = 'aborted',
   Failed = 'failed',
+}
+
+export enum MessageContentTransformType {
+  Citation = 'citation',
+  Image = 'image',
 }

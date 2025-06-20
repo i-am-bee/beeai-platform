@@ -14,15 +14,30 @@
  * limitations under the License.
  */
 
-import clsx from 'clsx';
-import type { PropsWithChildren } from 'react';
-
-import classes from './FileCardsList.module.scss';
-
-interface Props {
-  className?: string;
+.root {
+  display: flex;
+  flex-direction: column;
+  row-gap: rem(20px);
 }
 
-export function FileCardsList({ className, children }: PropsWithChildren<Props>) {
-  return <ul className={clsx(classes.root, className)}>{children}</ul>;
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  column-gap: $spacing-05;
+}
+
+.heading {
+  font-size: rem(14px);
+  line-height: math.div(18, 14);
+  letter-spacing: $letter-spacing;
+  font-weight: 600;
+}
+
+.closeButton {
+  margin-block: -$spacing-03;
+  margin-inline-end: -$spacing-03;
+  :global(.cds--popover) {
+    display: none;
+  }
 }

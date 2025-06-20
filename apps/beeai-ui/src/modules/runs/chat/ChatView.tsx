@@ -18,10 +18,13 @@ import type { PropsWithChildren } from 'react';
 
 import { MainContent } from '#components/layouts/MainContent.tsx';
 
+import { SourcesPanel } from '../sources/components/SourcesPanel';
 export function ChatView({ children }: PropsWithChildren) {
   return (
     <>
       <MainContent limitHeight>{children}</MainContent>
+
+      <SourcesPanel />
     </>
   );
 }

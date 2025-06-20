@@ -14,15 +14,16 @@
  * limitations under the License.
  */
 
-import clsx from 'clsx';
-import type { PropsWithChildren } from 'react';
+import { use } from 'react';
 
-import classes from './FileCardsList.module.scss';
+import { SourcesContext } from './sources-context';
 
-interface Props {
-  className?: string;
-}
+export function useSources() {
+  const context = use(SourcesContext);
 
-export function FileCardsList({ className, children }: PropsWithChildren<Props>) {
-  return <ul className={clsx(classes.root, className)}>{children}</ul>;
+  if (!context) {
+    throw new Error('useSources must be used within a SourcesProvider');
+  }
+
+  return context;
 }

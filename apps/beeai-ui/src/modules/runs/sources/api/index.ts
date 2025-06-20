@@ -14,15 +14,16 @@
  * limitations under the License.
  */
 
-import clsx from 'clsx';
-import type { PropsWithChildren } from 'react';
+import type { SourceMetadata } from './types';
 
-import classes from './FileCardsList.module.scss';
+// TODO:
+export async function readSourceMetadata({ url }: { url: string }): Promise<SourceMetadata> {
+  const title: string | undefined = 'beeai-platform: Discover, run, and compose AI';
 
-interface Props {
-  className?: string;
-}
-
-export function FileCardsList({ className, children }: PropsWithChildren<Props>) {
-  return <ul className={clsx(classes.root, className)}>{children}</ul>;
+  return {
+    title: title ?? url,
+    description:
+      'Orchestrate agents into workflows — regardless of how or where they were built . Key features. Feature, Description. ACP Native, Built from the ground.',
+    faviconUrl: 'https://github.githubassets.com/favicons/favicon.svg',
+  };
 }
