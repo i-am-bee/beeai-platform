@@ -9,6 +9,7 @@ from uuid import UUID
 import aioboto3
 from botocore.exceptions import ClientError
 from kink import inject
+from pydantic import HttpUrl
 
 from beeai_server.configuration import Configuration
 from beeai_server.domain.models.file import AsyncFile, FileMetadata
@@ -80,7 +81,7 @@ class S3ObjectStorageRepository(IObjectStorageRepository):
                 logger.error(f"Error deleting file {file_id}: {e}")
                 raise
 
-    async def get_file_url(self, *, file_id: UUID) -> str:
+    async def get_file_url(self, *, file_id: UUID) -> HttpUrl:
         object_key = self._get_object_key(file_id)
         async with self._get_client() as client:
             try:
@@ -90,7 +91,7 @@ class S3ObjectStorageRepository(IObjectStorageRepository):
                     Params={"Bucket": self.config.bucket_name, "Key": object_key},
                     ExpiresIn=3600,  # 1 hour
                 )
-                return url
+                return HttpUrl(url)
 
             except ClientError as e:
                 if e.response["Error"]["Code"] == "NoSuchKey" or e.response["Error"]["Code"] == "404":

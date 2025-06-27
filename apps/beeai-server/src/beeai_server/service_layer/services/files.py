@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import logging
+from asyncio import CancelledError
 from contextlib import suppress, asynccontextmanager
 from typing import AsyncIterator, Callable, Awaitable, Annotated
 from typing_extensions import Doc
@@ -10,7 +11,6 @@ from uuid import UUID
 from kink import inject
 
 from beeai_server.configuration import Configuration
-from beeai_server.jobs.tasks.file import extract_text
 from beeai_server.domain.models.file import (
     AsyncFile,
     File,
@@ -20,7 +20,7 @@ from beeai_server.domain.models.file import (
     FileType,
 )
 from beeai_server.domain.models.user import User
-from beeai_server.domain.repositories.file import IObjectStorageRepository
+from beeai_server.domain.repositories.file import IObjectStorageRepository, ITextExtractionBackend
 from beeai_server.exceptions import StorageCapacityExceededError, EntityNotFoundError
 from beeai_server.service_layer.services.users import UserService
 from beeai_server.service_layer.unit_of_work import IUnitOfWorkFactory
@@ -33,6 +33,7 @@ class FileService:
     def __init__(
         self,
         object_storage_repository: IObjectStorageRepository,
+        extraction_backend: ITextExtractionBackend,
         uow: IUnitOfWorkFactory,
         user_service: UserService,
         configuration: Configuration,
@@ -42,9 +43,33 @@ class FileService:
         self._user_service = user_service
         self._storage_limit_per_user = configuration.object_storage.storage_limit_per_user_bytes
         self._storage_limit_per_file = configuration.object_storage.max_single_file_size
+        self._extraction_backend = extraction_backend
 
-    async def upload_file(self, *, file: AsyncFile, user: User) -> File:
-        db_file = File(filename=file.filename, created_by=user.id)
+    async def extract_text(self, file_id: UUID, job_id: str):
+        async with self._uow() as uow:
+            extraction = await uow.files.get_extraction_by_file_id(file_id=file_id)
+            file = await uow.files.get(file_id=file_id)
+            user = await uow.users.get(user_id=file.created_by)
+            extraction.set_started(job_id=job_id)
+            await uow.files.update_extraction(extraction)
+            await uow.commit()
+        try:
+            file_url = await self._object_storage.get_file_url(file_id=file_id)
+            extracted_file = await self._extraction_backend.extract_text(file_url=file_url)
+            await self.upload_file(file=extracted_file, user=user, file_type=FileType.extracted_text)
+        except CancelledError:
+            async with self._uow() as uow:
+                extraction.set_cancelled()
+                await uow.files.update_extraction(extraction)
+            raise
+        except Exception as ex:
+            async with self._uow() as uow:
+                extraction.set_failed(str(ex))
+                await uow.files.update_extraction(extraction)
+            raise
+
+    async def upload_file(self, *, file: AsyncFile, user: User, file_type: FileType.user_upload) -> File:
+        db_file = File(filename=file.filename, created_by=user.id, file_type=file_type)
         try:
             async with self._uow() as uow:
                 total_usage = await uow.files.total_usage(user_id=user.id)
@@ -100,14 +125,15 @@ class FileService:
             except EntityNotFoundError:
                 file_metadata = await self._object_storage.get_file_metadata(file_id=file_id)
                 extraction = TextExtraction(file_id=file_id)
-                if file_metadata.content_type == "text/plain":
+                if file_metadata.content_type in {"text/plain", "text/markdown"}:
                     extraction.set_completed(
                         extracted_file_id=file_id,  # Point to itself since it's already text
                         metadata=ExtractionMetadata(backend="in-place"),
                     )
             if extraction.status == ExtractionStatus.pending:
-                job = await extract_text.configure(queueing_lock=str(file.id)).defer_async(file_id=file_id)
-                extraction.set_started(str(job.id))
+                from beeai_server.jobs.tasks.file import extract_text
+
+                await extract_text.configure(queueing_lock=str(file.id)).defer_async(file_id=file_id)
 
             await uow.files.update_extraction(extraction)
             await uow.commit()
