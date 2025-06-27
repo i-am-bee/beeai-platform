@@ -10,10 +10,18 @@ from uuid import UUID
 from kink import inject
 
 from beeai_server.configuration import Configuration
-from beeai_server.domain.models.file import AsyncFile, File
+from beeai_server.jobs.tasks.file import extract_text
+from beeai_server.domain.models.file import (
+    AsyncFile,
+    File,
+    TextExtraction,
+    ExtractionStatus,
+    ExtractionMetadata,
+    FileType,
+)
 from beeai_server.domain.models.user import User
 from beeai_server.domain.repositories.file import IObjectStorageRepository
-from beeai_server.exceptions import StorageCapacityExceededError
+from beeai_server.exceptions import StorageCapacityExceededError, EntityNotFoundError
 from beeai_server.service_layer.services.users import UserService
 from beeai_server.service_layer.unit_of_work import IUnitOfWorkFactory
 
@@ -66,11 +74,44 @@ class FileService:
             async with self._object_storage.get_file(file_id=file_id) as file:
                 yield file
 
+    async def get_extraction(self, *, file_id: UUID, user: User) -> TextExtraction:
+        async with self._uow() as uow:
+            return await uow.files.get_extraction_by_file_id(file_id=file_id, user_id=user.id)
+
     async def delete(self, *, file_id: UUID, user: User) -> None:
         async with self._uow() as uow:
             await uow.files.delete(file_id=file_id, user_id=user.id)
             await self._object_storage.delete_file(file_id=file_id)
             await uow.commit()
+
+    async def create_extraction(self, *, file_id: UUID, user: User) -> TextExtraction:
+        async with self._uow() as uow:
+            file = await uow.files.get(file_id=file_id, user_id=user.id, file_type=FileType.user_upload)
+            try:
+                # Check if extraction already exists
+                extraction = await uow.files.get_extraction_by_file_id(file_id, user_id=user.id)
+                match extraction.status:
+                    case ExtractionStatus.completed | ExtractionStatus.pending | ExtractionStatus.in_progress:
+                        return extraction
+                    case ExtractionStatus.failed | ExtractionStatus.cancelled:
+                        extraction.reset_for_retry()
+                    case _:
+                        raise TypeError(f"Unknown extraction status: {extraction.status}")
+            except EntityNotFoundError:
+                file_metadata = await self._object_storage.get_file_metadata(file_id=file_id)
+                extraction = TextExtraction(file_id=file_id)
+                if file_metadata.content_type == "text/plain":
+                    extraction.set_completed(
+                        extracted_file_id=file_id,  # Point to itself since it's already text
+                        metadata=ExtractionMetadata(backend="in-place"),
+                    )
+            if extraction.status == ExtractionStatus.pending:
+                job = await extract_text.configure(queueing_lock=str(file.id)).defer_async(file_id=file_id)
+                extraction.set_started(str(job.id))
+
+            await uow.files.update_extraction(extraction)
+            await uow.commit()
+            return extraction
 
 
 def limit_size_wrapper(

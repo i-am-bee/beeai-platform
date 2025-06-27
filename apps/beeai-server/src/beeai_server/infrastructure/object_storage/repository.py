@@ -11,7 +11,7 @@ from botocore.exceptions import ClientError
 from kink import inject
 
 from beeai_server.configuration import Configuration
-from beeai_server.domain.models.file import AsyncFile
+from beeai_server.domain.models.file import AsyncFile, FileMetadata
 from beeai_server.domain.repositories.file import IObjectStorageRepository
 from beeai_server.exceptions import EntityNotFoundError
 
@@ -92,6 +92,21 @@ class S3ObjectStorageRepository(IObjectStorageRepository):
                 )
                 return url
 
+            except ClientError as e:
+                if e.response["Error"]["Code"] == "NoSuchKey" or e.response["Error"]["Code"] == "404":
+                    raise EntityNotFoundError(entity="file", id=file_id)
+                raise
+
+    async def get_file_metadata(self, *, file_id: UUID) -> FileMetadata:
+        object_key = self._get_object_key(file_id)
+        async with self._get_client() as client:
+            try:
+                response = await client.head_object(Bucket=self.config.bucket_name, Key=object_key)
+                return FileMetadata(
+                    content_type=response.get("ContentType", ""),
+                    filename=response.get("Metadata", {}).get("filename", ""),
+                    content_length=response.get("ContentLength", 0),
+                )
             except ClientError as e:
                 if e.response["Error"]["Code"] == "NoSuchKey" or e.response["Error"]["Code"] == "404":
                     raise EntityNotFoundError(entity="file", id=file_id)
