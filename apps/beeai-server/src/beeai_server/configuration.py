@@ -149,6 +149,8 @@ class Configuration(BaseSettings):
     platform_service_url: str = "beeai-platform-svc:8333"
     port: int = 8333
 
+    base_path: str = "/"
+
     @model_validator(mode="after")
     def _oci_registry_defaultdict(self):
         oci_registry = defaultdict(OCIRegistryConfiguration)
@@ -163,6 +165,12 @@ class Configuration(BaseSettings):
                     self.oci_registry[registry_short].auth_header = conf.auth
             except ValueError as e:
                 logger.error(f"Failed to parse .dockerconfigjson: {e}. Some agent images might not work correctly.")
+        return self
+
+    @model_validator(mode="after")
+    def _base_path_ends_in_slash(self):
+        if not self.base_path.endswith("/"):
+            self.base_path += "/"
         return self
 
 
