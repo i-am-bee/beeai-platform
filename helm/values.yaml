@@ -376,3 +376,37 @@ docling:
     port: 15001
   imagePullPolicy: IfNotPresent
   image: "ghcr.io/docling-project/docling-serve-cpu:v0.16.0"
+
+## MCP Context Forge chart configuration
+## ref: https://github.com/IBM/mcp-context-forge/blob/main/charts/mcp-stack/values.yaml
+## @param mcp-stack.enabled Switch to enable or disable the MCP Context Forge helm chart
+##
+mcp-stack:
+  mcpContextForge:
+    replicaCount: 1
+    image:
+      repository: tomaspilar/mcp-context-forge # ghcr.io/ibm/mcp-context-forge
+      tag: latest
+    hpa:
+      enabled: false
+    ingress:
+      enabled: false
+    config:
+      CACHE_TYPE: "memory"
+    secret:
+      AUTH_REQUIRED: "false"      
+  migration:
+    enabled: true
+    image:
+      repository: tomaspilar/mcp-context-forge # ghcr.io/ibm/mcp-context-forge
+      tag: latest
+  postgres:
+    enabled: true
+  redis:
+    enabled: false
+  pgadmin:
+    enabled: false
+  redisCommander:
+    enabled: false
+  mcpFastTimeServer:
+    enabled: false
