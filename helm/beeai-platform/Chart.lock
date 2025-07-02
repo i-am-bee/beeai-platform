@@ -12,4 +12,4 @@ dependencies:
   repository: oci://ghcr.io/ibm/mcp-context-forge
   version: 0.1.1
 digest: sha256:aea2c2aeca6f525267ae059294750d6849286375a2b66fc92db92f9f8a89b02a
-generated: "2025-07-07T11:11:01.969946+02:00"
+generated: "2025-07-07T10:33:37.338817+02:00"

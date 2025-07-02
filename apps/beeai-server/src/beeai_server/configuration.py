@@ -78,6 +78,10 @@ class AuthConfiguration(BaseModel):
         return self
 
 
+class McpConfiguration(BaseModel):
+    gateway_endpoint_url: AnyUrl = AnyUrl("http://mcp-stack-mcpgateway:80")
+
+
 class ObjectStorageConfiguration(BaseModel):
     endpoint_url: AnyUrl = AnyUrl("http://seaweedfs-all-in-one:9009")
     access_key_id: Secret[str] = Secret("beeai-admin-user")
@@ -149,6 +153,7 @@ class Configuration(BaseSettings):
     auth: AuthConfiguration = Field(default_factory=AuthConfiguration)
     logging: LoggingConfiguration = Field(default_factory=LoggingConfiguration)
     agent_registry: AgentRegistryConfiguration = Field(default_factory=AgentRegistryConfiguration)
+    mcp: McpConfiguration = Field(default_factory=McpConfiguration)
     oci_registry: dict[str, OCIRegistryConfiguration] = Field(default_factory=dict)
     oci_registry_docker_config_json: dict[int, DockerConfigJson] = {}
     telemetry: TelemetryConfiguration = Field(default_factory=TelemetryConfiguration)
