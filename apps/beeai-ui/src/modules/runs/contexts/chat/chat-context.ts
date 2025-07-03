@@ -15,6 +15,7 @@ export const ChatMessagesContext = createContext<ChatMessage[]>([]);
 interface ChatContextValue {
   agent: Agent;
   isPending: boolean;
+  hasMessages: boolean;
   onClear: () => void;
   onCancel: () => void;
   sendMessage: (input: string) => Promise<void>;

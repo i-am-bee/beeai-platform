@@ -225,11 +225,12 @@ export function ChatProvider({ agent, children }: PropsWithChildren<Props>) {
     () => ({
       agent,
       isPending,
+      hasMessages: messages.length > 0,
       onCancel: stopAgent,
       onClear: handleClear,
       sendMessage,
     }),
-    [agent, isPending, stopAgent, handleClear, sendMessage],
+    [agent, isPending, messages.length, stopAgent, handleClear, sendMessage],
   );
 
   return (

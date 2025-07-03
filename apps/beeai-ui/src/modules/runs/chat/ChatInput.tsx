@@ -23,7 +23,7 @@ export const ChatInput = memo(function ChatInput({ onMessageSubmit }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const formRef = useRef<InputBarFormHandle>(null);
 
-  const { isPending, sendMessage, onCancel } = useChat();
+  const { isPending, hasMessages, sendMessage, onCancel } = useChat();
   const { isPending: isFileUploadPending } = useFileUpload();
 
   const form = useForm<ChatFormValues>({
@@ -62,6 +62,12 @@ export const ChatInput = memo(function ChatInput({ onMessageSubmit }: Props) {
           inputProps={{
             placeholder: 'Ask a question…',
             ...register('input', { required: true }),
+          }}
+          showSuggestions={!hasMessages}
+          onInputChange={(value) => {
+            console.log(value);
+
+            form.setValue('input', value, { shouldValidate: true });
           }}
         >
           {!isPending ? (

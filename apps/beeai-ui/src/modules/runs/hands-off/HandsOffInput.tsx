@@ -50,6 +50,8 @@ export function HandsOffInput() {
             placeholder: 'Write the agent prompt here',
             ...register('input', { required: true }),
           }}
+          showSuggestions
+          onInputChange={(value) => form.setValue('input', value, { shouldValidate: true })}
         >
           <Button type="submit" renderIcon={PlayFilledAlt} size="sm" disabled={isSubmitDisabled}>
             Run

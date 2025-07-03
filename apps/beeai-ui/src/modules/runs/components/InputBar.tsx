@@ -4,7 +4,7 @@
  */
 
 import type { FormEventHandler, PropsWithChildren, ReactNode, Ref, TextareaHTMLAttributes } from 'react';
-import { useImperativeHandle, useRef } from 'react';
+import { useImperativeHandle, useRef, useState } from 'react';
 
 import { TextAreaAutoHeight } from '#components/TextAreaAutoHeight/TextAreaAutoHeight.tsx';
 import { dispatchInputEventOnFormTextarea, submitFormOnEnter } from '#utils/form-utils.ts';
@@ -15,13 +15,16 @@ import { FileUploadButton } from '../files/components/FileUploadButton';
 import { useFileUpload } from '../files/contexts';
 import { AgentModel } from './AgentModel';
 import classes from './InputBar.module.scss';
+import { PromptSuggestions } from './PromptSuggestions';
 
 interface Props {
   isSubmitDisabled?: boolean;
   settings?: ReactNode;
   formRef?: Ref<InputBarFormHandle>;
   inputProps?: TextareaHTMLAttributes<HTMLTextAreaElement>;
+  showSuggestions?: boolean;
   onSubmit?: FormEventHandler;
+  onInputChange?: (value: string) => void;
 }
 
 export type InputBarFormHandle = {
@@ -33,10 +36,16 @@ export function InputBar({
   settings,
   formRef: formRefProp,
   inputProps,
+  showSuggestions = false,
   onSubmit,
+  onInputChange,
   children,
 }: PropsWithChildren<Props>) {
   const formRef = useRef<HTMLFormElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  const [promptSuggestionsOpen, setPromptSuggestionsOpen] = useState(false);
+
   const { files, removeFile, isDisabled: isFileUploadDisabled } = useFileUpload();
 
   useImperativeHandle(
@@ -53,6 +62,18 @@ export function InputBar({
     }),
     [],
   );
+
+  const fillWithInput = (value: string) => {
+    const formElem = formRef.current;
+
+    if (!formElem || !onInputChange) return;
+
+    onInputChange(value);
+    setPromptSuggestionsOpen(false);
+    dispatchInputEventOnFormTextarea(formElem);
+
+    inputRef.current?.focus();
+  };
 
   return (
     <form
@@ -82,6 +103,7 @@ export function InputBar({
         rows={1}
         autoFocus
         {...inputProps}
+        ref={inputRef}
         className={classes.textarea}
         onKeyDown={(event) => !isSubmitDisabled && submitFormOnEnter(event)}
       />
@@ -96,6 +118,15 @@ export function InputBar({
 
         <div className={classes.submit}>{children}</div>
       </div>
+
+      {showSuggestions && (
+        <PromptSuggestions
+          inputRef={inputRef}
+          isOpen={promptSuggestionsOpen}
+          setIsOpen={setPromptSuggestionsOpen}
+          onSubmit={fillWithInput}
+        />
+      )}
     </form>
   );
 }
