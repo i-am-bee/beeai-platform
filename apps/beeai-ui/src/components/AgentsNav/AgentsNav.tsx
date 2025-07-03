@@ -3,17 +3,18 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useLocation } from 'react-router';
+import { usePathname } from 'next/navigation';
 
-import { Nav, type NavItem } from '#components/SidePanel/Nav.tsx';
-import { useViewTransition } from '#hooks/useViewTransition.ts';
+import type { NavItem } from '#components/SidePanel/Nav.tsx';
+import { Nav } from '#components/SidePanel/Nav.tsx';
+import { useRouteTransition } from '#contexts/TransitionContext/index.ts';
 import { useListAgents } from '#modules/agents/api/queries/useListAgents.ts';
 import { getAgentUiMetadata } from '#modules/agents/utils.ts';
 import { routes } from '#utils/router.ts';
 
 export function AgentsNav() {
-  const { pathname } = useLocation();
-  const { transitionTo } = useViewTransition();
+  const pathname = usePathname();
+  const { transitionTo } = useRouteTransition();
 
   const { data: agents } = useListAgents({ onlyUiSupported: true, sort: true });
 
