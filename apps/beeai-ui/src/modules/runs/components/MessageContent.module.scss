@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-.input {
-  font-size: rem(24px);
-  line-height: math.div(32, 24);
+.empty {
+  color: $text-disabled;
 }

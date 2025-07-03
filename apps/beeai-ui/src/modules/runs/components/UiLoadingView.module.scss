@@ -3,7 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-.mainContent {
+.root {
   display: flex;
-  inline-size: 100%;
+  align-items: center;
+  justify-content: center;
+  block-size: 100%;
 }

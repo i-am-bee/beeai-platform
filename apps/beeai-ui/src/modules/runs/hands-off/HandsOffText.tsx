@@ -6,17 +6,31 @@
 import { useAutoScroll } from '#hooks/useAutoScroll.ts';
 
 import { AgentOutputBox } from '../components/AgentOutputBox';
-import { useHandsOff } from '../contexts/hands-off';
+import { useAgentRun } from '../contexts/agent-run';
+import { useMessages } from '../contexts/messages';
+import { MessageFiles } from '../files/components/MessageFiles';
+import { MessageSources } from '../sources/components/MessageSources';
+import { isAgentMessage } from '../utils';
 
 export function HandsOffText() {
-  const { agent, output, isPending } = useHandsOff();
+  const { agent, isPending } = useAgentRun();
+  const { messages } = useMessages();
+
+  const message = messages.find(isAgentMessage);
+  const output = message?.content;
   const { ref: autoScrollRef } = useAutoScroll([output]);
 
-  return (
-    <>
-      <AgentOutputBox text={output} isPending={isPending} downloadFileName={`${agent.name}-output`} />
+  const sources = message?.sources ?? [];
 
-      <div ref={autoScrollRef} />
-    </>
-  );
+  return output ? (
+    <div>
+      <AgentOutputBox sources={sources} text={output} isPending={isPending} downloadFileName={`${agent.name}-output`}>
+        <MessageFiles message={message} />
+
+        <MessageSources message={message} />
+      </AgentOutputBox>
+
+      {isPending && <div ref={autoScrollRef} />}
+    </div>
+  ) : null;
 }

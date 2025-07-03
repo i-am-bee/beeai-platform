@@ -4,13 +4,6 @@
  */
 
 .root {
-  display: flex;
-  justify-content: space-between;
-  column-gap: $spacing-05;
-  min-inline-size: 0;
-}
-
-.heading {
   font-size: rem(16px);
   line-height: math.div(20, 16);
   font-weight: 400;
@@ -23,4 +16,7 @@
 
 .name {
   @include line-clamp();
+  .ui--chat & {
+    @include visually-hidden();
+  }
 }
