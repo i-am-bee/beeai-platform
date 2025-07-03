@@ -2,6 +2,17 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import os
+
+from beeai_framework.agents.experimental import RequirementAgent
+from beeai_framework.agents.experimental.requirements.conditional import (
+    ConditionalRequirement,
+)
+from beeai_framework.middleware.trajectory import GlobalTrajectoryMiddleware
+from beeai_framework.tools import Tool
+from beeai_framework.tools.think import ThinkTool
+
+os.environ.setdefault("OTEL_EXPORTER_OTLP_ENDPOINT", "http://127.0.0.1:6006")
+
 import logging
 from collections.abc import AsyncGenerator
 from textwrap import dedent
@@ -12,7 +23,7 @@ from acp_sdk.models import MessagePart
 from acp_sdk.server import Context, Server
 from acp_sdk.models.platform import PlatformUIAnnotation, PlatformUIType, AgentToolInfo
 
-from beeai_framework.agents.react import ReActAgent, ReActAgentUpdateEvent
+from beeai_framework.agents.react import ReActAgentUpdateEvent
 from beeai_framework.backend import AssistantMessage, UserMessage
 from beeai_framework.backend.chat import ChatModel, ChatModelParameters
 from beeai_framework.memory import UnconstrainedMemory
@@ -25,8 +36,12 @@ from openinference.instrumentation.beeai import BeeAIInstrumentor
 
 BeeAIInstrumentor().instrument()
 ## TODO: https://github.com/phoenixframework/phoenix/issues/6224
-logging.getLogger("opentelemetry.exporter.otlp.proto.http._log_exporter").setLevel(logging.CRITICAL)
-logging.getLogger("opentelemetry.exporter.otlp.proto.http.metric_exporter").setLevel(logging.CRITICAL)
+logging.getLogger("opentelemetry.exporter.otlp.proto.http._log_exporter").setLevel(
+    logging.CRITICAL
+)
+logging.getLogger("opentelemetry.exporter.otlp.proto.http.metric_exporter").setLevel(
+    logging.CRITICAL
+)
 
 server = Server()
 
@@ -45,12 +60,19 @@ def to_framework_message(role: str, content: str) -> beeai_framework.backend.Mes
             beeai_ui=PlatformUIAnnotation(
                 ui_type=PlatformUIType.CHAT,
                 user_greeting="How can I help you?",
-                display_name="Chat",
+                display_name="Chat NEW",
                 tools=[
-                    AgentToolInfo(name="Web Search (DuckDuckGo)", description="Retrieves real-time search results."),
-                    AgentToolInfo(name="Wikipedia Search", description="Fetches summaries from Wikipedia."),
                     AgentToolInfo(
-                        name="Weather Information (OpenMeteo)", description="Provides real-time weather updates."
+                        name="Web Search (DuckDuckGo)",
+                        description="Retrieves real-time search results.",
+                    ),
+                    AgentToolInfo(
+                        name="Wikipedia Search",
+                        description="Fetches summaries from Wikipedia.",
+                    ),
+                    AgentToolInfo(
+                        name="Weather Information (OpenMeteo)",
+                        description="Provides real-time weather updates.",
                     ),
                 ],
             ),
@@ -101,49 +123,78 @@ def to_framework_message(role: str, content: str) -> beeai_framework.backend.Mes
             "**Agents with Long-Term Memory** – Maintains context across conversations for improved interactions.",
         ],
         env=[
-            {"name": "LLM_MODEL", "description": "Model to use from the specified OpenAI-compatible API."},
-            {"name": "LLM_API_BASE", "description": "Base URL for OpenAI-compatible API endpoint"},
-            {"name": "LLM_API_KEY", "description": "API key for OpenAI-compatible API endpoint"},
+            {
+                "name": "LLM_MODEL",
+                "description": "Model to use from the specified OpenAI-compatible API.",
+            },
+            {
+                "name": "LLM_API_BASE",
+                "description": "Base URL for OpenAI-compatible API endpoint",
+            },
+            {
+                "name": "LLM_API_KEY",
+                "description": "API key for OpenAI-compatible API endpoint",
+            },
         ],
     )
 )
-async def chat(input: list[Message], context: Context) -> AsyncGenerator:
+async def chat_new(input: list[Message], context: Context) -> AsyncGenerator:
     """
     The agent is an AI-powered conversational system with memory, supporting real-time search, Wikipedia lookups,
     and weather updates through integrated tools.
     """
 
     # ensure the model is pulled before running
-    os.environ["OPENAI_API_BASE"] = os.getenv("LLM_API_BASE", "http://localhost:11434/v1")
+    os.environ["OPENAI_API_BASE"] = os.getenv(
+        "LLM_API_BASE", "http://localhost:11434/v1"
+    )
     os.environ["OPENAI_API_KEY"] = os.getenv("LLM_API_KEY", "dummy")
-    llm = ChatModel.from_name(f"openai:{os.getenv('LLM_MODEL', 'llama3.1')}", ChatModelParameters(temperature=0))
-
-    # Configure tools
-    tools: list[AnyTool] = [WikipediaTool(), OpenMeteoTool(), DuckDuckGoSearchTool()]
+    llm = ChatModel.from_name(
+        f"openai:{os.getenv('LLM_MODEL', 'llama3.1')}",
+        ChatModelParameters(temperature=0),
+    )
 
     # Create agent with memory and tools
-    agent = ReActAgent(llm=llm, tools=tools, memory=UnconstrainedMemory())
+    agent = RequirementAgent(
+        llm=llm,
+        tools=[ThinkTool(), WikipediaTool(), OpenMeteoTool(), DuckDuckGoSearchTool()],
+        requirements=[
+            ConditionalRequirement(
+                ThinkTool, force_at_step=1, force_after=Tool, consecutive_allowed=False
+            )
+        ],
+        middlewares=[GlobalTrajectoryMiddleware()]
+    )
 
-    history = [message async for message in context.session.load_history()]
+    response = await agent.run("What to do in Boston?").middleware(GlobalTrajectoryMiddleware(included=[Tool]))
+    yield response.answer.text
 
-    framework_messages = [to_framework_message(message.role, str(message)) for message in history + input]
-    await agent.memory.add_many(framework_messages)
+    # history = [message async for message in context.session.load_history()]
 
-    async for data, event in agent.run():
-        match (data, event.name):
-            case (ReActAgentUpdateEvent(), "partial_update"):
-                update = data.update.value
-                if not isinstance(update, str):
-                    update = update.get_text_content()
-                match data.update.key:
-                    case "thought" | "tool_name" | "tool_input" | "tool_output":
-                        yield {data.update.key: update}
-                    case "final_answer":
-                        yield MessagePart(content=update)
+    # framework_messages = [
+    #     to_framework_message(message.role, str(message)) for message in history + input
+    # ]
+    # await agent.memory.add_many(framework_messages)
+
+    # async for data, event in agent.run():
+    #     match (data, event.name):
+    #         case (ReActAgentUpdateEvent(), "partial_update"):
+    #             update = data.update.value
+    #             if not isinstance(update, str):
+    #                 update = update.get_text_content()
+    #             match data.update.key:
+    #                 case "thought" | "tool_name" | "tool_input" | "tool_output":
+    #                     yield {data.update.key: update}
+    #                 case "final_answer":
+    #                     yield MessagePart(content=update)
 
 
 def run():
-    server.run(host=os.getenv("HOST", "127.0.0.1"), port=int(os.getenv("PORT", 8000)), configure_telemetry=True)
+    server.run(
+        host=os.getenv("HOST", "127.0.0.1"),
+        port=int(os.getenv("PORT", 8000)),
+        configure_telemetry=True,
+    )
 
 
 if __name__ == "__main__":
