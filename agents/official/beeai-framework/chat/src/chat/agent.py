@@ -3,6 +3,7 @@
 
 import os
 
+from beeai_framework.adapters.openai import OpenAIChatModel
 from beeai_framework.agents.experimental import RequirementAgent
 from beeai_framework.agents.experimental.requirements.conditional import (
     ConditionalRequirement,
@@ -10,6 +11,7 @@ from beeai_framework.agents.experimental.requirements.conditional import (
 from beeai_framework.middleware.trajectory import GlobalTrajectoryMiddleware
 from beeai_framework.tools import Tool
 from beeai_framework.tools.think import ThinkTool
+from requests import api
 
 os.environ.setdefault("OTEL_EXPORTER_OTLP_ENDPOINT", "http://127.0.0.1:6006")
 
@@ -149,9 +151,14 @@ async def chat_new(input: list[Message], context: Context) -> AsyncGenerator:
         "LLM_API_BASE", "http://localhost:11434/v1"
     )
     os.environ["OPENAI_API_KEY"] = os.getenv("LLM_API_KEY", "dummy")
-    llm = ChatModel.from_name(
-        f"openai:{os.getenv('LLM_MODEL', 'llama3.1')}",
-        ChatModelParameters(temperature=0),
+
+    OpenAIChatModel.tool_choice_support = {"none", "single", "auto"}
+    llm = OpenAIChatModel(
+        "granite3.3:8b",
+        base_url="PROXY_URL",
+        api_key="RITS-API-KEY",
+        # f"openai:{os.getenv('LLM_MODEL', 'llama3.1')}",
+        # ChatModelParameters(temperature=0),
     )
 
     # Create agent with memory and tools
@@ -163,10 +170,12 @@ async def chat_new(input: list[Message], context: Context) -> AsyncGenerator:
                 ThinkTool, force_at_step=1, force_after=Tool, consecutive_allowed=False
             )
         ],
-        middlewares=[GlobalTrajectoryMiddleware()]
+        middlewares=[GlobalTrajectoryMiddleware()],
     )
 
-    response = await agent.run("What to do in Boston?").middleware(GlobalTrajectoryMiddleware(included=[Tool]))
+    response = await agent.run("What to do in Boston?").middleware(
+        GlobalTrajectoryMiddleware(included=[Tool])
+    )
     yield response.answer.text
 
     # history = [message async for message in context.session.load_history()]
