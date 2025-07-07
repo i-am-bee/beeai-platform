@@ -233,7 +233,7 @@ telepresence --use ".*${NAMESPACE}.*" uninstall --all-agents || true
 {% raw %}
 LIMA_HOME=~/.beeai/lima limactl list -f '{{.Name}}' 2>/dev/null | sed '/^[^a-z]*$/d' | \
     xargs -rn 1 -I"{}" \
-    {{ mise_bin }} run beeai-cli:run -- platform stop --vm-name="{}"
+    mise run beeai-cli:run -- platform stop --vm-name="{}"
 {% endraw %}
 
 telepresence --use ".*${NAMESPACE}.*" quit
