@@ -81,14 +81,19 @@ class McpProxyService:
         response = await self._client.post("/servers", json={"associated_tools": tools})
         response.raise_for_status()
         server = await response.json()
+        id = server["id"]
         exp = self._config.mcp.toolkit_expiration_seconds
-        # TODO schedule cleanup task
+
+        from beeai_server.jobs.tasks.mcp import delete_toolkit  # Avoid circual import
+
+        await delete_toolkit.configure(queueing_lock=id, schedule_in={"seconds": exp}).defer_async(toolkit_id=id)
+
         return Toolkit(
-            id=server["id"],
+            id=id,
             name=server["name"],
             description=server["description"],
             tools=server["associated_tools"],
-            url=f"/toolkits/{server['id']}/mcp?exp={exp}",  # TODO is relative URL sufficient?
+            url=f"/toolkits/{id}/mcp?exp={exp}",  # TODO is relative URL sufficient?
         )
 
     async def delete_toolkit(self, *, toolkit_id: str) -> None:
