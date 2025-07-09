@@ -81,12 +81,14 @@ class McpProxyService:
         response = await self._client.post("/servers", json={"associated_tools": tools})
         response.raise_for_status()
         server = await response.json()
+        exp = self._config.mcp.toolkit_expiration_seconds
+        # TODO schedule cleanup task
         return Toolkit(
             id=server["id"],
             name=server["name"],
             description=server["description"],
             tools=server["associated_tools"],
-            url=f"/toolkits/{server['id']}/mcp",  # TODO is relative URL sufficient?
+            url=f"/toolkits/{server['id']}/mcp?exp={exp}",  # TODO is relative URL sufficient?
         )
 
     async def delete_toolkit(self, *, toolkit_id: str) -> None:
