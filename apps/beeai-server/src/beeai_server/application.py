@@ -39,6 +39,7 @@ from beeai_server.exceptions import (
 )
 from beeai_server.api.routes.provider import router as provider_router
 from beeai_server.api.routes.acp import router as acp_router
+from beeai_server.api.routes.mcp import router as mcp_router
 from beeai_server.api.routes.env import router as env_router
 from beeai_server.api.routes.files import router as files_router
 from beeai_server.api.routes.llm import router as llm_router
@@ -109,6 +110,7 @@ def mount_routes(app: FastAPI):
 
     server_router = APIRouter()
     server_router.include_router(acp_router, prefix="/acp")
+    server_router.include_router(mcp_router, prefix="/mcp")
     server_router.include_router(provider_router, prefix="/providers", tags=["providers"])
     server_router.include_router(env_router, prefix="/variables", tags=["variables"])
     server_router.include_router(files_router, prefix="/files", tags=["files"])
