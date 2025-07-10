@@ -132,7 +132,7 @@ wheels = [
 
 [[package]]
 name = "beeai-framework"
-version = "0.1.29"
+version = "0.1.30"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiofiles" },
@@ -145,9 +145,9 @@ dependencies = [
     { name = "pydantic-settings" },
     { name = "requests" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/1e/9e/6bcac07b0f240100d6c05db0f95c9539bb0cd221fe9d9187f339b954cecf/beeai_framework-0.1.29.tar.gz", hash = "sha256:36604e6287e309eb4b99e17ddb5bc160f532844fb64af7bd5bfa2c43ad3635c2", size = 119982, upload-time = "2025-07-02T13:18:05.301Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/f1/d9/54bfd13095a4ff46667c5cf30d6ef7a231937d65737df4a593050269564d/beeai_framework-0.1.30.tar.gz", hash = "sha256:e27302268d41741ebef08ba0411b98dd3322b21dae2d79f33b293c57509129b8", size = 117790, upload-time = "2025-07-09T16:49:53.464Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ad/7b/c8e60c4412ccb519441e91e0f53625c13e7072eb67a2432d08bd0ebf87bc/beeai_framework-0.1.29-py3-none-any.whl", hash = "sha256:ae07b62f36be6783e6b1cdb72f78f8acaae038a08b89a16cc777527a152529d9", size = 271857, upload-time = "2025-07-02T13:18:03.794Z" },
+    { url = "https://files.pythonhosted.org/packages/95/9f/aef04339767f723d09841129dfc8071a61e4a9652638b4ea5925c562b55c/beeai_framework-0.1.30-py3-none-any.whl", hash = "sha256:a8c8d171477ace471e4a9bb16701dff919705945bcbc0bc12e892da9afdc3c95", size = 216176, upload-time = "2025-07-09T16:49:52.1Z" },
 ]
 
 [package.optional-dependencies]
@@ -212,7 +212,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "acp-sdk", specifier = "==1.0.0" },
-    { name = "beeai-framework", extras = ["duckduckgo", "wikipedia"], specifier = "~=0.1.29" },
+    { name = "beeai-framework", extras = ["duckduckgo", "wikipedia"], specifier = "~=0.1.30" },
     { name = "openinference-instrumentation-beeai", specifier = ">=0.1.6" },
     { name = "pydantic-settings", specifier = ">=2.9.0" },
 ]
