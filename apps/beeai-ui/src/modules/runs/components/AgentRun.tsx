@@ -3,35 +3,19 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+'use client';
 import { type Agent, UiType } from '#modules/agents/api/types.ts';
 import { getAgentUiMetadata } from '#modules/agents/utils.ts';
 
-import { useAgent } from '../../agents/api/queries/useAgent';
 import { ChatView } from '../chat/ChatView';
 import { HandsOffView } from '../hands-off/HandsOffView';
-import { UiFailedView } from './UiFailedView';
-import { UiLoadingView } from './UiLoadingView';
 import { UiNotAvailableView } from './UiNotAvailableView';
 
 interface Props {
-  name: string;
+  agent: Agent;
 }
 
-export function AgentRun({ name }: Props) {
-  const { data: agent, error, isPending, isRefetching, refetch } = useAgent({ name });
-
-  if (isPending) {
-    return <UiLoadingView />;
-  }
-
-  if (!agent) {
-    return <UiFailedView message={error?.message} isRefetching={isRefetching} onRetry={refetch} />;
-  }
-
-  return renderUi({ agent });
-}
-
-const renderUi = ({ agent }: { agent: Agent }) => {
+export function AgentRun({ agent }: Props) {
   const { ui_type } = getAgentUiMetadata(agent);
 
   switch (ui_type) {
@@ -42,4 +26,4 @@ const renderUi = ({ agent }: { agent: Agent }) => {
     default:
       return <UiNotAvailableView agent={agent} />;
   }
-};
+}

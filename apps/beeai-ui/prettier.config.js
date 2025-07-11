@@ -3,9 +3,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-export default {
+const config = {
   printWidth: 120,
   singleQuote: true,
   trailingComma: 'all',
   proseWrap: 'always',
 };
+
+export default config;

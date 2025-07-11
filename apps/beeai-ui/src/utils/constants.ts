@@ -3,6 +3,20 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { parseNav } from '#modules/nav/parseNav.ts';
+
+export const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME ?? 'BeeAI';
+
+export const APP_FAVICON_SVG = process.env.NEXT_PUBLIC_APP_FAVICON_SVG ?? '/bee.svg';
+
+export const PHOENIX_SERVER_TARGET = process.env.NEXT_PUBLIC_PHOENIX_SERVER_TARGET ?? 'http://localhost:6006';
+
+export const NAV_ITEMS = parseNav(process.env.NEXT_PUBLIC_NAV_ITEMS);
+
+export const API_URL = process.env.API_URL;
+
+export const PROD_MODE = process.env.NODE_ENV === 'production';
+
 export const GITHUB_REPO_LINK = 'https://github.com/i-am-bee/beeai';
 
 export const FRAMEWORK_GITHUB_REPO_LINK = 'https://github.com/i-am-bee/beeai-framework';

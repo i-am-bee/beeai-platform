@@ -3,24 +3,25 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+'use client';
+
 import { ArrowUpRight } from '@carbon/icons-react';
 import { SkeletonText, Tab, TabList, TabPanel, TabPanels, Tabs } from '@carbon/react';
-import { useParams } from 'react-router';
 
 import { MarkdownContent } from '#components/MarkdownContent/MarkdownContent.tsx';
 import { SidePanel } from '#components/SidePanel/SidePanel.tsx';
 import { useApp } from '#contexts/App/index.ts';
 import { SidePanelVariant } from '#contexts/App/types.ts';
+import { useAgentNameFromPath } from '#hooks/useAgentNameFromPath.ts';
 
 import { useAgent } from '../api/queries/useAgent';
-import type { AgentPageParams } from '../types';
 import { getAvailableAgentLinkUrl } from '../utils';
 import classes from './AgentDetailPanel.module.scss';
 import { AgentTags } from './AgentTags';
 import { AgentTools } from './AgentTools';
 
 export function AgentDetailPanel() {
-  const { agentName } = useParams<AgentPageParams>();
+  const agentName = useAgentNameFromPath();
   const { data: agent, isPending } = useAgent({ name: agentName ?? '' });
   const { activeSidePanel } = useApp();
 

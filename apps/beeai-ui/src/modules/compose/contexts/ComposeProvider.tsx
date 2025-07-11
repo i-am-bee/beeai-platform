@@ -3,14 +3,15 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { useSearchParams } from 'next/navigation';
 import type { PropsWithChildren } from 'react';
 import { useCallback, useEffect, useMemo } from 'react';
 import { useFieldArray, useFormContext } from 'react-hook-form';
-import { useSearchParams } from 'react-router';
 
 import { getErrorCode } from '#api/utils.ts';
 import { useHandleError } from '#hooks/useHandleError.ts';
 import { usePrevious } from '#hooks/usePrevious.ts';
+import { useUpdateSearchParams } from '#hooks/useUpdateSearchParams.ts';
 import { useAgent } from '#modules/agents/api/queries/useAgent.ts';
 import { useListAgents } from '#modules/agents/api/queries/useListAgents.ts';
 import { useRunAgent } from '#modules/runs/hooks/useRunAgent.ts';
@@ -25,7 +26,10 @@ import { ComposeContext, ComposeStatus } from './compose-context';
 
 export function ComposeProvider({ children }: PropsWithChildren) {
   const { data: agents } = useListAgents({ onlyUiSupported: true, sort: true });
-  const [searchParams, setSearchParams] = useSearchParams();
+
+  const searchParams = useSearchParams();
+  const { updateSearchParams } = useUpdateSearchParams();
+
   const errorHandler = useHandleError();
 
   const { handleSubmit, getValues, setValue, watch } = useFormContext<SequentialFormValues>();
@@ -35,27 +39,26 @@ export function ComposeProvider({ children }: PropsWithChildren) {
 
   const { data: sequentialAgent } = useAgent({ name: SEQUENTIAL_WORKFLOW_AGENT_NAME });
 
-  const previousSteps = usePrevious(steps);
-
   const lastStep = steps.at(-1);
   const result = useMemo(() => lastStep?.result, [lastStep]);
 
   let lastAgentIdx = 0;
 
+  const previousSteps = usePrevious(steps);
+
   useEffect(() => {
     if (!agents || steps.length === previousSteps.length) return;
 
-    setSearchParams((searchParams) => {
-      searchParams.set(SEQUENTIAL_WORKFLOW_AGENTS_URL_PARAM, steps.map(({ agent }) => agent.name).join(','));
-      return searchParams;
+    updateSearchParams({
+      [SEQUENTIAL_WORKFLOW_AGENTS_URL_PARAM]: steps.map(({ agent }) => agent.name).join(','),
     });
-  }, [agents, previousSteps.length, setSearchParams, steps]);
+  }, [agents, steps, previousSteps, updateSearchParams]);
 
   useEffect(() => {
     if (!agents) return;
 
     const agentNames = searchParams
-      .get(SEQUENTIAL_WORKFLOW_AGENTS_URL_PARAM)
+      ?.get(SEQUENTIAL_WORKFLOW_AGENTS_URL_PARAM)
       ?.split(',')
       .filter((item) => item.length);
     if (agentNames?.length && !steps.length) {

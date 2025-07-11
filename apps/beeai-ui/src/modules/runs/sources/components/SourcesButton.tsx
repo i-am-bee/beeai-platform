@@ -45,6 +45,7 @@ function Source({ source }: SourceProps) {
   }
 
   const {
+    title,
     metadata: { faviconUrl },
   } = data;
 
@@ -52,7 +53,8 @@ function Source({ source }: SourceProps) {
     <Source.Skeleton />
   ) : faviconUrl ? (
     <span className={classes.source}>
-      <img src={faviconUrl} className={classes.icon} />
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={faviconUrl} className={classes.icon} alt={title ?? ''} />
     </span>
   ) : null;
 }

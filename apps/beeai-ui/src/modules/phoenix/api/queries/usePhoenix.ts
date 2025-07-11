@@ -5,7 +5,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 
-import { PHOENIX_SERVER_TARGET, PROD_MODE } from '#utils/vite-constants.ts';
+import { PHOENIX_SERVER_TARGET, PROD_MODE } from '#utils/constants.ts';
 
 import { phoenixKeys } from '../keys';
 

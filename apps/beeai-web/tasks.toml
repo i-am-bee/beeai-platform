@@ -83,10 +83,10 @@ outputs = { auto = true }
 
 # preview
 
-["beeai-web:preview"]
+["beeai-web:start"]
 depends = ["common:setup:pnpm"]
 dir = "{{config_root}}/apps/beeai-web"
-run = "pnpm preview"
+run = "pnpm start"
 
 # clean
 

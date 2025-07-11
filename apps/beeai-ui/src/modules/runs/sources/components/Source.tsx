@@ -44,7 +44,8 @@ export function Source({ source, isActive }: Props) {
         {description && <p className={classes.description}>{description}</p>}
 
         <p className={classes.footer}>
-          {faviconUrl && <img src={faviconUrl} className={classes.favicon} />}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          {faviconUrl && <img src={faviconUrl} className={classes.favicon} alt={title} />}
 
           <span className={classes.url}>{url}</span>
         </p>

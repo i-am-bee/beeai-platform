@@ -4,20 +4,15 @@
  */
 
 'use client';
-
 import { ArrowUpRight } from '@carbon/icons-react';
 import { DOCUMENTATION_LINK, MainNav } from '@i-am-bee/beeai-ui';
 import { usePathname } from 'next/navigation';
-import { ComponentType } from 'react';
-
-import { TransitionLink } from '@/components/TransitionLink/TransitionLink';
 
 export function Navigation() {
   const pathname = usePathname();
 
   return (
     <MainNav
-      linkComponent={TransitionLink as ComponentType}
       items={items.map(({ section, ...item }) => ({ ...item, isActive: section && pathname?.startsWith(item.href) }))}
     />
   );
