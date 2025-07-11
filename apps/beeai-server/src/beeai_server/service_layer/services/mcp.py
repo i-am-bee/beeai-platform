@@ -6,6 +6,7 @@ from contextlib import AsyncExitStack
 import logging
 from datetime import timedelta
 from typing import NamedTuple
+import uuid
 
 from beeai_server.api.schema.mcp import Server, Tool, Toolkit
 from beeai_server.domain.models.gateway import GatewayLocation
@@ -46,21 +47,23 @@ class McpProxyService:
     ):
         self._user_service = user_service
         self._config = configuration
-        self._client = httpx.AsyncClient(base_url=self._config.mcp.gateway_endpoint_url, timeout=None)
+        self._client = httpx.AsyncClient(base_url=str(self._config.mcp.gateway_endpoint_url), timeout=None)
 
     # Servers
 
     async def create_server(self, *, location: GatewayLocation) -> Server:
-        response = await self._client.post("/gateways", json={"location": location})
-        response.raise_for_status()
-        gateway = await response.json()
-        return Server(id=gateway["id"], location=GatewayLocation(gateway["location"]))
+        payload = {"name": str(uuid.uuid4()), "url": str(location.model_dump())}
+        print(payload)
+        response = await self._client.post(
+            "/gateways", json={"name": str(uuid.uuid4()), "url": str(location.model_dump())}
+        )
+        gateway = response.raise_for_status().json()
+        return Server(id=gateway["id"] or "missing-bug", location=GatewayLocation(gateway["url"]))
 
     async def list_servers(self) -> list[Server]:
         response = await self._client.get("/gateways")
-        response.raise_for_status()
-        gateways: list[dict] = await response.json()
-        return [Server(id=gateway["id"], location=GatewayLocation(gateway["location"])) for gateway in gateways]
+        gateways: list[dict] = response.raise_for_status().json()
+        return [Server(id=gateway["id"], location=GatewayLocation(gateway["url"])) for gateway in gateways]
 
     async def delete_server(self, *, server_id: str) -> None:
         response = await self._client.delete(f"/gateways/{server_id}")
@@ -71,16 +74,14 @@ class McpProxyService:
 
     async def list_tools(self) -> list[Tool]:
         response = await self._client.get("/tools")
-        response.raise_for_status()
-        tools: list[dict] = await response.json()
+        tools: list[dict] = response.raise_for_status().json()
         return [Tool(id=tool["id"], name=tool["name"], description=tool["description"]) for tool in tools]
 
     # Toolkits
 
     async def create_toolkit(self, *, tools: list[str]) -> Toolkit:
-        response = await self._client.post("/servers", json={"associated_tools": tools})
-        response.raise_for_status()
-        server = await response.json()
+        response = await self._client.post("/servers", json={"name": str(uuid.uuid4()), "associatedTools": tools})
+        server = response.raise_for_status().json()
         id = server["id"]
         exp = self._config.mcp.toolkit_expiration_seconds
 
@@ -90,10 +91,8 @@ class McpProxyService:
 
         return Toolkit(
             id=id,
-            name=server["name"],
-            description=server["description"],
-            tools=server["associated_tools"],
-            url=f"/toolkits/{id}/mcp?exp={exp}",  # TODO is relative URL sufficient?
+            tools=server["associatedTools"],
+            mcp_url=f"http://{self._config.platform_service_url}/toolkits/{id}/mcp?exp={exp}",  # TODO is relative URL sufficient?
         )
 
     async def delete_toolkit(self, *, toolkit_id: str) -> None:

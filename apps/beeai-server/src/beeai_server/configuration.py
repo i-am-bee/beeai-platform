@@ -79,7 +79,7 @@ class AuthConfiguration(BaseModel):
 
 
 class McpConfiguration(BaseModel):
-    gateway_endpoint_url: AnyUrl = AnyUrl("http://mcp-stack-mcpgateway:80")
+    gateway_endpoint_url: AnyUrl = AnyUrl("http://beeai-mcp-stack-mcpgateway:80")
     toolkit_expiration_seconds: int = 24 * 60 * 60
 
 

@@ -47,7 +47,7 @@ async def list_tools(mcp_service: McpProxyServiceDependency):
 
 @router.post("/toolkits", response_model=Toolkit)
 async def create_toolkit(request: CreateToolkitRequest, mcp_service: McpProxyServiceDependency):
-    toolkit = await mcp_service.create_toolkit()
+    toolkit = await mcp_service.create_toolkit(tools=request.tools)
     return toolkit
 
 

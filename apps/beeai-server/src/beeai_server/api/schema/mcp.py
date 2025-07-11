@@ -28,7 +28,5 @@ class CreateToolkitRequest(BaseModel):
 
 class Toolkit(BaseModel):
     id: str
-    name: str
-    description: Optional[str]
     tools: list[str]
     mcp_url: AnyUrl

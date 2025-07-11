@@ -19,7 +19,6 @@ dependencies:
     name: seaweedfs
     repository: https://seaweedfs.github.io/seaweedfs/helm
     version: 4.x.x
-  - condition: mcp-stack.enabled
-    name: mcp-stack
-    repository: oci://ghcr.io/ibm/mcp-context-forge
-    version: 0.1.1
+  - name: mcp-stack
+    repository: oci://docker.io/tomaspilar
+    version: 0.3.0
