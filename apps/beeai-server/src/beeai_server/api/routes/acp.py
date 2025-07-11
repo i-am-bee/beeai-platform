@@ -14,11 +14,15 @@ from acp_sdk.models import (
     RunResumeRequest,
     RunResumeResponse,
 )
+from fastapi import Depends
+from fastapi.security import APIKeyCookie
 
 from beeai_server.api.dependencies import AcpProxyServiceDependency, AuthenticatedUserDependency
 from beeai_server.api.schema.acp import AgentReadResponse, AgentsListResponse
 from beeai_server.service_layer.services.acp import AcpServerResponse
 
+# api_key_header = APIKeyHeader(name="Authorization")
+api_key_header = APIKeyCookie(name="beeai-platform")
 router = fastapi.APIRouter()
 
 
@@ -28,12 +32,16 @@ async def ping() -> PingResponse:
 
 
 @router.get("/agents")
-async def list_agents(acp_service: AcpProxyServiceDependency) -> AgentsListResponse:
+async def list_agents(
+    acp_service: AcpProxyServiceDependency, api_key: str = Depends(api_key_header)
+) -> AgentsListResponse:
     return AgentsListResponse(agents=await acp_service.list_agents())
 
 
 @router.get("/agents/{name}")
-async def read_agent(name: AgentName, acp_service: AcpProxyServiceDependency) -> AgentReadResponse:
+async def read_agent(
+    name: AgentName, acp_service: AcpProxyServiceDependency, api_key: str = Depends(api_key_header)
+) -> AgentReadResponse:
     return (await acp_service.get_agent_by_name(name)).model_dump()
 
 
@@ -47,7 +55,10 @@ def _to_fastapi(response: AcpServerResponse):
 
 @router.post("/runs")
 async def create_run(
-    request: RunCreateRequest, acp_service: AcpProxyServiceDependency, user: AuthenticatedUserDependency
+    request: RunCreateRequest,
+    acp_service: AcpProxyServiceDependency,
+    user: AuthenticatedUserDependency,
+    api_key: str = Depends(api_key_header),
 ) -> RunCreateResponse:
     context = await acp_service.get_proxy_context(agent_name=request.agent_name, user=user)
     response = await acp_service.send_request(context, "POST", "/runs", request)
@@ -56,7 +67,10 @@ async def create_run(
 
 @router.get("/runs/{run_id}")
 async def read_run(
-    run_id: RunId, acp_service: AcpProxyServiceDependency, user: AuthenticatedUserDependency
+    run_id: RunId,
+    acp_service: AcpProxyServiceDependency,
+    user: AuthenticatedUserDependency,
+    api_key: str = Depends(api_key_header),
 ) -> RunReadResponse:
     client = await acp_service.get_proxy_context(run_id=run_id, user=user)
     response = await acp_service.send_request(client, "GET", f"/runs/{run_id}")
@@ -65,7 +79,10 @@ async def read_run(
 
 @router.get("/runs/{run_id}/events")
 async def read_run_events(
-    run_id: RunId, acp_service: AcpProxyServiceDependency, user: AuthenticatedUserDependency
+    run_id: RunId,
+    acp_service: AcpProxyServiceDependency,
+    user: AuthenticatedUserDependency,
+    api_key: str = Depends(api_key_header),
 ) -> RunReadResponse:
     client = await acp_service.get_proxy_context(run_id=run_id, user=user)
     response = await acp_service.send_request(client, "GET", f"/runs/{run_id}/events")
@@ -74,7 +91,11 @@ async def read_run_events(
 
 @router.post("/runs/{run_id}")
 async def resume_run(
-    run_id: RunId, request: RunResumeRequest, acp_service: AcpProxyServiceDependency, user: AuthenticatedUserDependency
+    run_id: RunId,
+    request: RunResumeRequest,
+    acp_service: AcpProxyServiceDependency,
+    user: AuthenticatedUserDependency,
+    api_key: str = Depends(api_key_header),
 ) -> RunResumeResponse:
     client = await acp_service.get_proxy_context(run_id=run_id, user=user)
     response = await acp_service.send_request(client, "POST", f"/runs/{run_id}", request)
@@ -83,7 +104,10 @@ async def resume_run(
 
 @router.post("/runs/{run_id}/cancel")
 async def cancel_run(
-    run_id: RunId, acp_service: AcpProxyServiceDependency, user: AuthenticatedUserDependency
+    run_id: RunId,
+    acp_service: AcpProxyServiceDependency,
+    user: AuthenticatedUserDependency,
+    api_key: str = Depends(api_key_header),
 ) -> RunCancelResponse:
     client = await acp_service.get_proxy_context(run_id=run_id, user=user)
     response = await acp_service.send_request(client, "POST", f"/runs/{run_id}/cancel")
@@ -92,7 +116,10 @@ async def cancel_run(
 
 @router.get("/sessions/{session_id}")
 async def read_session(
-    session_id: SessionId, acp_service: AcpProxyServiceDependency, user: AuthenticatedUserDependency
+    session_id: SessionId,
+    acp_service: AcpProxyServiceDependency,
+    user: AuthenticatedUserDependency,
+    api_key: str = Depends(api_key_header),
 ) -> SessionReadResponse:
     client = await acp_service.get_proxy_context(session_id=session_id, user=user)
     response = await acp_service.send_request(client, "GET", f"/sessions/{session_id}")

@@ -52,7 +52,12 @@ serviceAccount:
   # The name of the service account to use.
   # If not set and create is true, a name is generated using the fullname template
   name: ""
-
+# helm now allows creating a crds folder which will skip schema validation
+usessl:
+  enabled: true
+  IBM_CLIENT_ID: <your_client_id_here>
+  IBM_CLIENT_SECRET: <your_client_secret_here>
+  DISCOVERY_ENDPOINT: <your_oidc_discovery_endpoint_here>
 # This is for setting Kubernetes Annotations to a Pod.
 # For more information checkout: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
 podAnnotations: { }
@@ -78,7 +83,9 @@ service:
   # This sets the service type more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types
   type: ClusterIP
   # This sets the ports more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/#field-spec-ports
+  portName: http
   port: 8333
+
 
 # This block is for setting up the ingress for more information can be found here: https://kubernetes.io/docs/concepts/services-networking/ingress/
 ingress:
@@ -108,25 +115,49 @@ resources:
 # This is to setup the liveness and readiness probes more information can be found here: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
 livenessProbe:
   httpGet:
-    path: /
+    path: /api/v1/acp/ping
+    scheme: HTTPS
     port: http
 readinessProbe:
   httpGet:
-    path: /
+    path: /api/v1/acp/ping
+    scheme: HTTPS
     port: http
 
 # Additional volumes on the output Deployment definition.
-volumes: [ ]
-# - name: foo
-#   secret:
-#     secretName: mysecret
-#     optional: false
+volumes:
+- name: secrets
+  projected:
+    sources:
+      - secret:
+          name: beeai-platform-tls
+          items:
+            - key: tls.crt
+              path: public.pem
+            - key: tls.key
+              path: private.pem
+      - secret:
+          name: ingestion-svc-tls
+          items:
+            - key: tls.crt
+              path: ingestion.pem
+            - key: tls.key
+              path: ingestion.key
+    defaultMode: 420
+- name: jwks
+  persistentVolumeClaim:
+    claimName: beeai-jwks
 
 # Additional volumeMounts on the output Deployment definition.
-volumeMounts: [ ]
-# - name: foo
-#   mountPath: "/etc/foo"
-#   readOnly: true
+volumeMounts: 
+- name: secrets
+  readOnly: true
+  mountPath: /etc/config
+- name: jwks
+  mountPath: /jwks
+
+storage:
+  storage_class: local-path
 
 nodeSelector: { }
 
@@ -182,7 +213,7 @@ agent:
 
 unmanagedProviderVariables:
   OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector-svc:8335
-  PLATFORM_URL: http://beeai-platform-svc:8333
+  PLATFORM_URL: https://beeai-platform-svc:8333
 
 # Variable configuration
 variables: { }

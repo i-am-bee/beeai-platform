@@ -243,7 +243,13 @@ async def start(
                                     "arch": "aarch64",
                                 },
                             ],
-                            "mounts": [{"location": "/tmp/beeai", "mountPoint": "/tmp/beeai", "writable": True}],
+                            "mounts": [
+                                {
+                                    "location": f"{Configuration().home}/images",
+                                    "mountPoint": "/tmp/beeai",
+                                    "writable": True,
+                                }
+                            ],
                             "containerd": {"system": False, "user": False},
                             "hostResolver": {"hosts": {"host.docker.internal": "host.lima.internal"}},
                             "provision": [
@@ -410,6 +416,22 @@ async def start(
         for image in import_images:
             await import_image(image, vm_name=vm_name)
 
+        # install certificate manager
+        await run_command(
+            {
+                VMDriver.lima: [_limactl_exe(), "--tty=false", "shell", vm_name, "--"],
+                VMDriver.wsl: ["wsl.exe", "--user", "root", "--distribution", vm_name, "--"],
+            }[_vm_driver()]
+            + [
+                "/bin/sh",
+                "-c",
+                f"{'sudo' if _vm_driver() == VMDriver.lima else ''} k3s kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.18.2/cert-manager.yaml",
+            ],
+            "Installing certificate manager...",
+            env={"LIMA_HOME": str(Configuration().lima_home)},
+            cwd="/",
+        )
+
         # Deploy HelmChart
         await run_command(
             [
@@ -490,6 +512,26 @@ async def start(
                 "job/helm-install-beeai",
             ],
             "Waiting for deploy job to be finished",
+            env={"LIMA_HOME": str(Configuration().lima_home)},
+            cwd="/",
+        )
+
+        await run_command(
+            [
+                *{
+                    VMDriver.lima: [_limactl_exe(), "shell", "--tty=true", vm_name, "--"],
+                    VMDriver.wsl: ["wsl.exe", "--user", "root", "--distribution", vm_name, "--"],
+                }[_vm_driver()],
+                "k3s",
+                "kubectl",
+                "--kubeconfig=/etc/rancher/k3s/k3s.yaml",
+                "get",
+                "pods",
+                "-o",
+                "wide",
+                "-A",
+            ],
+            "List running pods...",
             env={"LIMA_HOME": str(Configuration().lima_home)},
             cwd="/",
         )
@@ -592,15 +634,16 @@ async def import_image(
                 / "beeai"
             )
         else:
-            image_directory = pathlib.Path("/tmp/beeai")
-
-        image_directory.mkdir(exist_ok=True, parents=True)
+            image_directory = pathlib.Path("/tmp/images")
+        console.print(f"image_directory: [green] {image_directory} [/green]")
         image_filename = str(uuid.uuid4())
-        image_path = image_directory / image_filename
-
+        save_path = pathlib.Path(f"{Configuration().home}/images")
+        save_path.mkdir(exist_ok=True, parents=True)
+        save_image_path = save_path / image_filename
+        console.print(f"save_image_path: [green] {save_image_path} [/green]")
         try:
             await run_command(
-                ["docker", "image", "save", "-o", str(image_path), tag],
+                ["docker", "image", "save", "-o", str(save_image_path), tag],
                 f"Exporting image {tag} from Docker",
             )
 
@@ -616,7 +659,7 @@ async def import_image(
                                 vm_name,
                                 "--",
                                 "wslpath",
-                                str(image_path),
+                                str(save_image_path),
                             ],
                             "Detecting image path in WSL",
                             env={"WSL_UTF8": "1"},
@@ -637,6 +680,21 @@ async def import_image(
                 + [
                     "/bin/sh",
                     "-c",
+                    f'{"sudo" if _vm_driver() == VMDriver.lima else ""} mount | grep "/tmp/beeai" && ls -lahF /tmp/beeai ',
+                ],
+                f"Importing image {tag} into BeeAI platform",
+                env={"LIMA_HOME": str(Configuration().lima_home)},
+                cwd="/",
+            )
+
+            await run_command(
+                {
+                    VMDriver.lima: [_limactl_exe(), "--tty=false", "shell", vm_name, "--"],
+                    VMDriver.wsl: ["wsl.exe", "--user", "root", "--distribution", vm_name, "--"],
+                }[_vm_driver()]
+                + [
+                    "/bin/sh",
+                    "-c",
                     f"{'sudo' if _vm_driver() == VMDriver.lima else ''} k3s ctr images import {vm_image_path}",
                 ],
                 f"Importing image {tag} into BeeAI platform",
@@ -644,7 +702,7 @@ async def import_image(
                 cwd="/",
             )
         finally:
-            image_path.unlink()
+            save_image_path.unlink()
 
 
 @app.command("exec")

@@ -1,8 +1,8 @@
 # Copyright 2025 © BeeAI a Series of LF Projects, LLC
 # SPDX-License-Identifier: Apache-2.0
-
 import logging
 import pathlib
+import secrets
 from collections.abc import Iterable
 from contextlib import asynccontextmanager
 
@@ -23,11 +23,16 @@ from fastapi.responses import ORJSONResponse
 from kink import Container, di, inject
 from opentelemetry.metrics import CallbackOptions, Observation, get_meter
 from starlette.exceptions import HTTPException as StarletteHttpException
+from starlette.middleware import Middleware
+from starlette.middleware.authentication import AuthenticationMiddleware
+from starlette.middleware.httpsredirect import HTTPSRedirectMiddleware
+from starlette.middleware.sessions import SessionMiddleware
 from starlette.requests import Request
 from starlette.responses import FileResponse
 from starlette.status import HTTP_500_INTERNAL_SERVER_ERROR
 
 from beeai_server.api.routes.acp import router as acp_router
+from beeai_server.api.routes.auth import router as auth_router
 from beeai_server.api.routes.embeddings import router as embeddings_router
 from beeai_server.api.routes.env import router as env_router
 from beeai_server.api.routes.files import router as files_router
@@ -42,11 +47,18 @@ from beeai_server.exceptions import (
     ManifestLoadError,
     PlatformError,
 )
+from beeai_server.middleware.authentication_middleware import JwtAuthBackend, on_auth_error
 from beeai_server.run_workers import run_workers
 from beeai_server.telemetry import INSTRUMENTATION_NAME, shutdown_telemetry
 from beeai_server.utils.fastapi import NoCacheStaticFiles
 
 logger = logging.getLogger(__name__)
+SESSION_KEY = secrets.token_hex(16)
+middleware = [
+    Middleware(AuthenticationMiddleware, backend=JwtAuthBackend(), on_error=on_auth_error),
+    Middleware(SessionMiddleware, secret_key=SESSION_KEY, https_only=True, session_cookie="session"),
+    Middleware(HTTPSRedirectMiddleware),
+]
 
 
 def extract_messages(exc):
@@ -108,6 +120,7 @@ def mount_routes(app: FastAPI):
     )
 
     server_router = APIRouter()
+    server_router.include_router(auth_router, prefix="", tags=["auth"])
     server_router.include_router(acp_router, prefix="/acp")
     server_router.include_router(provider_router, prefix="/providers", tags=["providers"])
     server_router.include_router(env_router, prefix="/variables", tags=["variables"])
@@ -116,7 +129,6 @@ def mount_routes(app: FastAPI):
     server_router.include_router(ui_router, prefix="/ui", tags=["ui"])
     server_router.include_router(embeddings_router, prefix="/llm", tags=["embeddings"])
     server_router.include_router(vector_stores_router, prefix="/vector_stores", tags=["vector_stores"])
-
     app.mount("/healthcheck", lambda: "OK")
     app.include_router(server_router, prefix="/api/v1", tags=["provider"])
     app.mount("/", ui_app)
@@ -174,7 +186,8 @@ def app(*, dependency_overrides: Container | None = None) -> FastAPI:
         default_response_class=ORJSONResponse,  # better performance then default + handle NaN floats
         docs_url="/api/v1/docs",
         openapi_url="/api/v1/openapi.json",
-        servers=[{"url": f"http://localhost:{configuration.port}"}],
+        servers=[{"url": f"https://localhost:{configuration.port}"}],
+        middleware=middleware,
     )
 
     logger.info("Mounting routes...")

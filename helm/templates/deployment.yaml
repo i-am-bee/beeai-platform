@@ -170,6 +170,21 @@ spec:
             - name: AGENT_REGISTRY__LOCATIONS__{{ $name | upper }}
               value: {{ $location }}
             {{- end }}
+            {{- if .Values.usessl.enabled }}
+            - name: SSL_KEYFILE
+              value: /etc/config/private.pem
+            - name: SSL_CERTFILE
+              value: /etc/config/public.pem
+            - name: JWKS_ENDPOINT
+              value: https://preprod.login.w3.ibm.com/v1.0/endpoint/default/jwks
+            - name: DISCOVERY_ENDPOINT
+              value: https://preprod.login.w3.ibm.com/oidc/endpoint/default/.well-known/openid-configuration
+            - name: AUTHO
+            - name: IBM_CLIENT_ID
+              value: {{ .Values.usessl.IBM_CLIENT_ID}}
+            - name: IBM_CLIENT_SECRET
+              value: {{ .Values.usessl.IBM_CLIENT_SECRET}}
+            {{- end}}
             - name: PERSISTENCE__ENCRYPTION_KEY
               valueFrom:
                 secretKeyRef:

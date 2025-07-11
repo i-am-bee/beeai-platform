@@ -19,6 +19,9 @@ from beeai_server.telemetry import configure_telemetry  # noqa: E402
 configure_telemetry()
 
 logger = logging.getLogger(__name__)
+SSL_KEYFILE = os.environ.get("SSL_KEYFILE", None)
+SSL_CERTFILE = os.environ.get("SSL_CERTFILE", None)
+JWKS_ENDPOINT = os.environ.get("JWKS_ENDPOINT", None)
 
 
 def serve():
@@ -29,6 +32,26 @@ def serve():
         logger.error("Native windows is not supported, use WSL")
         return
 
+    # Download the public jwk key set (jwks)
+    if JWKS_ENDPOINT is not None:
+        os.spawnl(os.P_WAIT, "/usr/bin/wget", "/usr/bin/wget", JWKS_ENDPOINT, "-O", "/jwks/pubkeys.json")
+        logger.info("Public keys downloaded from jwks endpoint OK")
+        # extract the ingestion pem from the key
+        rc = os.spawnl(
+            os.P_WAIT,
+            "/usr/bin/openssl",
+            "/usr/bin/openssl",
+            "rsa",
+            "--in",
+            "/etc/config/ingestion.key",
+            "--pubout",
+            "-out",
+            "/jwks/ingestion.pem",
+        )
+        logger.info("openssl pubout rc: %s", str(rc))
+    else:
+        logger.warning("JWKS_ENDPOINT environment variable is None.  OAuth will be disabled")
+
     with socket.socket(socket.AF_INET) as sock:
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         try:
@@ -37,19 +60,38 @@ def serve():
             logger.error(f"Port {config.port} already in use, is another instance of beeai-server running?")
             return
 
+    params = [
+        sys.executable,
+        "-m",
+        "uvicorn",
+        "beeai_server.application:app",
+        f"--host={host}",
+        f"--port={config.port}",
+        "--timeout-keep-alive=2",
+        "--timeout-graceful-shutdown=2",
+    ]
+
+    if SSL_KEYFILE is not None and SSL_CERTFILE is not None:
+        params.append(f"--ssl-keyfile={SSL_KEYFILE}")
+        params.append(f"--ssl-certfile={SSL_CERTFILE}")
+
     os.execv(
         sys.executable,
-        [
-            sys.executable,
-            "-m",
-            "uvicorn",
-            "beeai_server.application:app",
-            f"--host={host}",
-            f"--port={config.port}",
-            "--timeout-keep-alive=2",
-            "--timeout-graceful-shutdown=2",
-        ],
+        params,
     )
+    # os.execv(
+    #     sys.executable,
+    #     [
+    #         sys.executable,
+    #         "-m",
+    #         "uvicorn",
+    #         "beeai_server.application:app",
+    #         f"--host={host}",
+    #         f"--port={config.port}",
+    #         "--timeout-keep-alive=2",
+    #         "--timeout-graceful-shutdown=2",
+    #     ],
+    # )
 
 
 def migrate():
