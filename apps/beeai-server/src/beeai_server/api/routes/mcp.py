@@ -62,6 +62,7 @@ async def create_toolkit(
 async def mcp_toolkit(
     toolkit_id: str, request: fastapi.Request, mcp_service: McpServiceDependency, user: AuthenticatedUserDependency
 ) -> None:
+    # TODO Redirect to Forge once it supports spec auth
     response = await mcp_service.streamable_http_proxy(request, toolkit_id=toolkit_id)
     return to_fastapi(response)
 
@@ -69,5 +70,6 @@ async def mcp_toolkit(
 @router.post("")
 @router.get("")
 async def mcp(request: fastapi.Request, mcp_service: McpServiceDependency, _: AdminUserDependency) -> None:
+    # TODO Redirect to Forge once it supports spec auth
     response = await mcp_service.streamable_http_proxy(request, toolkit_id=None)
     return to_fastapi(response)
