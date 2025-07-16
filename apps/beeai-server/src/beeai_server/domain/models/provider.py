@@ -91,6 +91,7 @@ class NetworkProviderLocation(RootModel):
         async with AsyncClient() as client:
             try:
                 response = await client.get(f"{str(self.root).rstrip('/')}/.well-known/agent.json", timeout=1)
+                response.raise_for_status()
                 return AgentCard.model_validate(response.json())
             except Exception as ex:
                 raise ValueError(f"Unable to load agents from location: {self.root}: {ex}") from ex

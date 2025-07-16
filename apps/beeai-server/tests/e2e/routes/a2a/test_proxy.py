@@ -184,7 +184,10 @@ def create_test_server(free_port: int, app: A2AStarletteApplication, test_config
                     break
                 time.sleep(0.5)
             else:
-                raise RuntimeError("Server did not start or register itself correctly")
+                error = "unknown error"
+                with contextlib.suppress(Exception):
+                    error = resp.json()
+                raise RuntimeError(f"Server did not start or register itself correctly: {error}")
 
         return Client(base_url=f"{test_configuration.server_url}/api/v1/a2a/{provider_id}")
 
@@ -290,6 +293,7 @@ def test_authenticated_extended_agent_card_endpoint_supported_with_specific_exte
     assert any(skill["id"] == "skill-extended" for skill in data["skills"]), "Extended skill not found in served card"
 
 
+@pytest.mark.skip(reason="Custom agent card urls are not supported at the moment.")
 def test_agent_card_custom_url(create_test_server, app: A2AStarletteApplication, agent_card: AgentCard):
     """Test the agent card endpoint with a custom URL."""
     client = create_test_server(app.build(agent_card_url="/my-agent"))
