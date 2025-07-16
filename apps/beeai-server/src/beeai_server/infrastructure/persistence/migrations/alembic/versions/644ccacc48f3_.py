@@ -30,6 +30,7 @@ def upgrade() -> None:
     # BREAKING CHANGE - switch to A2A - delete all providers
     op.execute("TRUNCATE TABLE providers CASCADE")
 
+    op.drop_column("providers", "env")
     op.add_column("providers", sa.Column("created_at", sa.DateTime(timezone=True), nullable=False))
     op.add_column("providers", sa.Column("last_active_at", sa.DateTime(timezone=True), nullable=False))
     op.add_column("providers", sa.Column("agent_card", sa.JSON(), nullable=False))
