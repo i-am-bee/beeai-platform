@@ -5,22 +5,27 @@ import os
 
 from beeai_framework.adapters.openai import OpenAIChatModel
 from beeai_framework.agents.experimental import RequirementAgent
+from beeai_framework.agents.experimental.events import RequirementAgentStartEvent, RequirementAgentSuccessEvent
 from beeai_framework.agents.experimental.requirements.conditional import (
     ConditionalRequirement,
 )
 from beeai_framework.middleware.trajectory import GlobalTrajectoryMiddleware
 from beeai_framework.tools import Tool
 from beeai_framework.tools.think import ThinkTool
+from chat.tools.file_reader import FileReaderTool
+from chat.utils.files import extract_files
+from opentelemetry.propagate import extract
 from requests import api
 
-os.environ.setdefault("OTEL_EXPORTER_OTLP_ENDPOINT", "http://127.0.0.1:6006")
+# os.environ.setdefault("OTEL_EXPORTER_OTLP_ENDPOINT", "http://127.0.0.1:6006")
+# os.environ.setdefault("OTEL_SDK_DISABLED", "true")
 
 import logging
 from collections.abc import AsyncGenerator
 from textwrap import dedent
 
 import beeai_framework
-from acp_sdk import Message, Metadata, Link, LinkType, Annotations
+from acp_sdk import AnyModel, GenericEvent, Message, Metadata, Link, LinkType, Annotations
 from acp_sdk.models import MessagePart
 from acp_sdk.server import Context, Server
 from acp_sdk.models.platform import PlatformUIAnnotation, PlatformUIType, AgentToolInfo
@@ -157,45 +162,64 @@ async def chat_new(input: list[Message], context: Context) -> AsyncGenerator:
         "granite3.3:8b",
         base_url="PROXY_URL",
         api_key="RITS-API-KEY",
-        # f"openai:{os.getenv('LLM_MODEL', 'llama3.1')}",
-        # ChatModelParameters(temperature=0),
     )
 
-    # Create agent with memory and tools
+    # os.environ["OPENAI_API_BASE"] = "http://localhost:12345/api/v1/llm"
+    # llm = ChatModel.from_name(
+    #     f"openai:{os.getenv('LLM_MODEL', 'llama3.1')}",
+    #     ChatModelParameters(temperature=0),
+    # )
+
+
+    extracted_files = await extract_files(context=context, incoming_messages=input)
+
+    # Base tool set
+    tools = [
+        ThinkTool(),
+        WikipediaTool(),
+        OpenMeteoTool(),
+        DuckDuckGoSearchTool(),
+    ]
+
+    # Only add FileReaderTool if there are files
+    if extracted_files:                       # truthy when the list is non-empty
+        tools.append(FileReaderTool(extracted_files))        # or FileReaderTool(files=extracted_files) if it takes the files
+
     agent = RequirementAgent(
         llm=llm,
-        tools=[ThinkTool(), WikipediaTool(), OpenMeteoTool(), DuckDuckGoSearchTool()],
+        tools=tools,
         requirements=[
             ConditionalRequirement(
                 ThinkTool, force_at_step=1, force_after=Tool, consecutive_allowed=False
             )
         ],
-        middlewares=[GlobalTrajectoryMiddleware()],
+        middlewares=[GlobalTrajectoryMiddleware(included=[Tool])],
     )
 
-    response = await agent.run("What to do in Boston?").middleware(
-        GlobalTrajectoryMiddleware(included=[Tool])
-    )
-    yield response.answer.text
+    history = [message async for message in context.session.load_history()]
 
-    # history = [message async for message in context.session.load_history()]
+    framework_messages = [
+        to_framework_message(message.role, str(message)) for message in history + input
+    ]
+    await agent.memory.add_many(framework_messages)
 
-    # framework_messages = [
-    #     to_framework_message(message.role, str(message)) for message in history + input
-    # ]
-    # await agent.memory.add_many(framework_messages)
+    async for event, meta in agent.run():
+        assert isinstance(
+            event, RequirementAgentStartEvent | RequirementAgentSuccessEvent
+        )
 
-    # async for data, event in agent.run():
-    #     match (data, event.name):
-    #         case (ReActAgentUpdateEvent(), "partial_update"):
-    #             update = data.update.value
-    #             if not isinstance(update, str):
-    #                 update = update.get_text_content()
-    #             match data.update.key:
-    #                 case "thought" | "tool_name" | "tool_input" | "tool_output":
-    #                     yield {data.update.key: update}
-    #                 case "final_answer":
-    #                     yield MessagePart(content=update)
+        last_step = event.state.steps[-1] if event.state.steps else None
+        if last_step and last_step.tool is not None:
+            last_tool_call = AnyModel(
+                tool_name=last_step.tool.name,
+                input=last_step.input,
+                output=last_step.output,
+                error=last_step.error,
+            )
+            yield GenericEvent(type=f"tool_{meta.trace.run_id}", generic=last_tool_call)
+
+        if event.state.answer is not None:
+            yield event.state.answer.text
 
 
 def run():
