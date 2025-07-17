@@ -2,6 +2,10 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import os
+from dotenv import load_dotenv
+from pydantic import BaseModel, Field
+
+load_dotenv()
 
 from beeai_framework.adapters.openai import OpenAIChatModel
 from beeai_framework.agents.experimental import RequirementAgent
@@ -19,6 +23,10 @@ from beeai_framework.tools.think import ThinkTool
 from chat.tools.files.file_generator import FileGeneratorTool
 from chat.tools.files.file_reader import create_file_reader_tool_class
 from chat.tools.files.utils import extract_files
+from chat.tools.react.clarification import ClarificationTool
+from beeai_framework.tools import Tool, StringToolOutput, ToolRunOptions
+from beeai_framework.emitter import Emitter
+from beeai_framework.context import RunContext
 
 # os.environ.setdefault("OTEL_EXPORTER_OTLP_ENDPOINT", "http://127.0.0.1:6006")
 os.environ.setdefault("OTEL_SDK_DISABLED", "true")
@@ -144,8 +152,6 @@ async def chat_new(input: list[Message], context: Context) -> AsyncGenerator:
     )
     os.environ["OPENAI_API_KEY"] = os.getenv("LLM_API_KEY", "dummy")
 
-    OpenAIChatModel.tool_choice_support = {"none", "single", "auto"}
-    os.environ["OPENAI_API_BASE"] = "http://localhost:12345/api/v1/llm"
     llm = ChatModel.from_name(
         f"openai:{os.getenv('LLM_MODEL', 'llama3.1')}",
         ChatModelParameters(temperature=0),
@@ -160,6 +166,7 @@ async def chat_new(input: list[Message], context: Context) -> AsyncGenerator:
         OpenMeteoTool(),
         DuckDuckGoSearchTool(),
         FileGeneratorTool(),
+        ClarificationTool()
     ]
 
     # Only add FileReaderTool if there are files
@@ -172,6 +179,15 @@ async def chat_new(input: list[Message], context: Context) -> AsyncGenerator:
         requirements=[
             ConditionalRequirement(
                 ThinkTool, force_at_step=1, force_after=Tool, consecutive_allowed=False
+            ),
+            ConditionalRequirement(
+                ThinkTool, force_after=WikipediaTool, consecutive_allowed=False
+            ),
+            ConditionalRequirement(
+                ThinkTool, force_after=OpenMeteoTool, consecutive_allowed=False
+            ),
+            ConditionalRequirement(
+                ThinkTool, force_after=DuckDuckGoSearchTool, consecutive_allowed=False
             )
         ],
         middlewares=[GlobalTrajectoryMiddleware(included=[Tool])],
