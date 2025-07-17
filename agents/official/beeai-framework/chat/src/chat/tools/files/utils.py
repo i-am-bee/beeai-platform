@@ -1,29 +1,19 @@
 # Copyright 2025 © BeeAI a Series of LF Projects, LLC
 # SPDX-License-Identifier: Apache-2.0
 
-import os
+import base64
 import re
-from typing import AsyncGenerator, Iterable
-from acp_sdk import Message, MessagePart
-from chat.tools.file_reader import BaseModel
+from typing import Iterable
+from acp_sdk import Message
 from acp_sdk.server import Context
-import httpx
-from pydantic import AnyUrl
-
-
-class FileInfo(BaseModel):
-    id: str
-    url: AnyUrl
-    filename: str
-    display_filename: str  # A sanitized version of the filename used for display, in case of naming conflicts.
-    content_type: str | None = None
-    file_size_bytes: int | None = None
+from chat.helpers.platform import get_file_info
+from chat.tools.files.model import FileChatInfo, OriginType
 
 
 async def extract_files(
     context: Context,
     incoming_messages: list[Message],
-) -> list[FileInfo]:
+) -> list[FileChatInfo]:
     """
     Extracts file URLs from the chat history and the current turn's messages.
 
@@ -43,16 +33,17 @@ async def extract_files(
 
     # 3. Collect, validate, deduplicate while preserving order
     seen: set[str] = set()
-    files: list[FileInfo] = []
+    files: list[FileChatInfo] = []
     existing_filenames: list[str] = []
 
     for part in all_parts:
         url = getattr(part, "content_url", None)
         if url and url not in seen:
-            fileInfo = await get_file_info(
+            fileInfo = await get_file_chat_info(
                 url,
-                content_type=part.content_type,
+                content_type=part.content_type or "application/octet-stream",
                 existing_filenames=existing_filenames,
+                origin_type=OriginType.UPLOADED,  # Default to uploaded since we can't access part.role
             )
             if fileInfo:
                 files.append(fileInfo)
@@ -62,9 +53,9 @@ async def extract_files(
     return files
 
 
-async def get_file_info(
-    url: str, content_type: str, existing_filenames: list[str]
-) -> FileInfo:
+async def get_file_chat_info(
+    url: str, content_type: str, origin_type: OriginType, existing_filenames: list[str]
+) -> FileChatInfo:
     # 1. Extract the file-ID from the signed-download URL
     file_id_match = re.search(r"/([^/]+)/content", str(url))
     if not file_id_match:
@@ -72,25 +63,23 @@ async def get_file_info(
     file_id = file_id_match.group(1)
 
     # 2. Ask the platform for the file metadata
-    async with httpx.AsyncClient(
-        base_url=os.getenv("PLATFORM_URL", "http://127.0.0.1:8333")
-    ) as client:
-        response = await client.get(f"api/v1/files/{file_id}")
-        response.raise_for_status()
-        api_payload = response.json()
+    file_response = await get_file_info(file_id)
+    if not file_response:
+        raise ValueError(f"File with ID {file_id} not found on the platform.")
 
     # 3. Merge the API data with the known url & content_type
     merged_payload = {
-        **api_payload,  # → id, filename, file_size_bytes …
+        **file_response.model_dump(),  # → id, filename, file_size_bytes …
         "url": url,  # override / add
         "content_type": content_type,
         "display_filename": next_unused_filename(
-            api_payload.get("filename", "unknown"), existing_filenames
+            file_response.filename, existing_filenames
         ),  # ensure unique display name
+        "origin_type": origin_type,
     }
 
     # 4. Validate & coerce with Pydantic
-    file_info = FileInfo.model_validate(merged_payload)
+    file_info = FileChatInfo.model_validate(merged_payload)
 
     # 5. Extra safeguard: make sure filename is a string
     if not isinstance(file_info.filename, str):
@@ -142,15 +131,14 @@ def next_unused_filename(name: str, existing: Iterable[str]) -> str:
     return f"{base}({i}){ext}"
 
 
-async def read_file(
-    file_url: AnyUrl,
-) -> AsyncGenerator[MessagePart, None]:
-    print(f"Reading file from {file_url}...")
-    async with httpx.AsyncClient() as client:
-        content = await client.get(str(file_url))
-        content_type = content.headers.get("Content-Type")
-        print(f"File read: {file_url}, content type: {content_type}, size: {len(content.content)} bytes")
-        yield MessagePart(content=content.content, content_type=content_type)
+
+
+
+def is_base64(s: str) -> bool:
+    try:
+        return base64.b64encode(base64.b64decode(s)) == s.encode()
+    except Exception:
+        return False
 
 
 def format_size(size: int | None) -> str:

@@ -12,11 +12,13 @@ from beeai_framework.agents.experimental.events import (
 from beeai_framework.agents.experimental.requirements.conditional import (
     ConditionalRequirement,
 )
+import beeai_framework.backend
 from beeai_framework.middleware.trajectory import GlobalTrajectoryMiddleware
 from beeai_framework.tools import Tool
 from beeai_framework.tools.think import ThinkTool
-from chat.tools.file_reader import create_file_reader_tool_class
-from chat.utils.files import extract_files
+from chat.tools.files.file_generator import FileGeneratorTool
+from chat.tools.files.file_reader import create_file_reader_tool_class
+from chat.tools.files.utils import extract_files
 
 # os.environ.setdefault("OTEL_EXPORTER_OTLP_ENDPOINT", "http://127.0.0.1:6006")
 os.environ.setdefault("OTEL_SDK_DISABLED", "true")
@@ -38,7 +40,8 @@ from acp_sdk.server import Context, Server
 from acp_sdk.models.platform import PlatformUIAnnotation, PlatformUIType, AgentToolInfo
 
 from beeai_framework.backend import AssistantMessage, UserMessage
-from beeai_framework.backend.chat import ChatModel, ChatModelParameters
+from beeai_framework.backend.chat import ChatModel
+from beeai_framework.backend.types import ChatModelParameters
 from beeai_framework.tools.search.duckduckgo import DuckDuckGoSearchTool
 from beeai_framework.tools.search.wikipedia import WikipediaTool
 from beeai_framework.tools.weather.openmeteo import OpenMeteoTool
@@ -126,27 +129,7 @@ def to_framework_message(role: str, content: str) -> beeai_framework.backend.Mes
             - **Event-Based Streaming** – Can send partial updates to clients as responses are generated.
             - **Customizable Configuration** – Users can enable or disable specific tools for enhanced responses.
             """
-        ),
-        use_cases=[
-            "**Chatbots** – Can be used in AI-powered chat applications with memory.",
-            "**Research Assistance** – Retrieves relevant information from web search and Wikipedia.",
-            "**Weather Inquiries** – Provides real-time weather updates based on location.",
-            "**Agents with Long-Term Memory** – Maintains context across conversations for improved interactions.",
-        ],
-        env=[
-            {
-                "name": "LLM_MODEL",
-                "description": "Model to use from the specified OpenAI-compatible API.",
-            },
-            {
-                "name": "LLM_API_BASE",
-                "description": "Base URL for OpenAI-compatible API endpoint",
-            },
-            {
-                "name": "LLM_API_KEY",
-                "description": "API key for OpenAI-compatible API endpoint",
-            },
-        ],
+        ),        
     )
 )
 async def chat_new(input: list[Message], context: Context) -> AsyncGenerator:
@@ -162,6 +145,7 @@ async def chat_new(input: list[Message], context: Context) -> AsyncGenerator:
     os.environ["OPENAI_API_KEY"] = os.getenv("LLM_API_KEY", "dummy")
 
     OpenAIChatModel.tool_choice_support = {"none", "single", "auto"}
+    os.environ["OPENAI_API_BASE"] = "http://localhost:12345/api/v1/llm"
     llm = ChatModel.from_name(
         f"openai:{os.getenv('LLM_MODEL', 'llama3.1')}",
         ChatModelParameters(temperature=0),
@@ -175,13 +159,12 @@ async def chat_new(input: list[Message], context: Context) -> AsyncGenerator:
         WikipediaTool(),
         OpenMeteoTool(),
         DuckDuckGoSearchTool(),
+        FileGeneratorTool(),
     ]
 
     # Only add FileReaderTool if there are files
     if extracted_files:  # truthy when the list is non-empty
-        tools.append(
-            create_file_reader_tool_class(extracted_files)()
-        )  # or FileReaderTool(files=extracted_files) if it takes the files
+        tools.append(create_file_reader_tool_class(extracted_files)())
 
     agent = RequirementAgent(
         llm=llm,
@@ -209,10 +192,10 @@ async def chat_new(input: list[Message], context: Context) -> AsyncGenerator:
         last_step = event.state.steps[-1] if event.state.steps else None
         if last_step and last_step.tool is not None:
             last_tool_call = AnyModel(
-                tool_name=last_step.tool.name,
-                input=last_step.input,
-                output=last_step.output.get_text_content() or None,
-                error=last_step.error,
+                tool_name=last_step.tool.name, # type: ignore
+                input=last_step.input, # type: ignore
+                output=last_step.output.get_text_content() or None, # type: ignore
+                error=last_step.error, # type: ignore
             )
             yield {"tool_{meta.trace.run_id}": str(last_tool_call)}
 
