@@ -2,29 +2,33 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import os
-from pydantic import BaseModel, Field
-
-
 from beeai_framework.adapters.openai import OpenAIChatModel
+from chat.helpers.local_settings import LocalSettings
+
+
 from beeai_framework.agents.experimental import RequirementAgent
+from beeai_framework.agents.experimental.utils._tool import FinalAnswerTool
 from beeai_framework.agents.experimental.events import (
     RequirementAgentStartEvent,
     RequirementAgentSuccessEvent,
 )
-from beeai_framework.agents.experimental.requirements.conditional import (
-    ConditionalRequirement,
-)
 import beeai_framework.backend
 from beeai_framework.middleware.trajectory import GlobalTrajectoryMiddleware
 from beeai_framework.tools import Tool
-from beeai_framework.tools.think import ThinkTool
 from chat.tools.files.file_generator import FileGeneratorTool
 from chat.tools.files.file_reader import create_file_reader_tool_class
 from chat.tools.files.utils import extract_files
-from chat.tools.react.clarification import ClarificationTool
-from beeai_framework.tools import Tool, StringToolOutput, ToolRunOptions
-from beeai_framework.emitter import Emitter
-from beeai_framework.context import RunContext
+from beeai_framework.tools import Tool
+from chat.tools.general.act import (
+    ActTool,
+    act_tool_middleware,
+    ActAlwaysFirstRequirement,
+)
+from chat.tools.general.clarification import (
+    ClarificationTool,
+    clarification_tool_middleware,
+)
+
 
 # os.environ.setdefault("OTEL_EXPORTER_OTLP_ENDPOINT", "http://127.0.0.1:6006")
 os.environ.setdefault("OTEL_SDK_DISABLED", "true")
@@ -46,7 +50,6 @@ from acp_sdk.server import Context, Server
 from acp_sdk.models.platform import PlatformUIAnnotation, PlatformUIType, AgentToolInfo
 
 from beeai_framework.backend import AssistantMessage, UserMessage
-from beeai_framework.backend.chat import ChatModel
 from beeai_framework.backend.types import ChatModelParameters
 from beeai_framework.tools.search.duckduckgo import DuckDuckGoSearchTool
 from beeai_framework.tools.search.wikipedia import WikipediaTool
@@ -154,11 +157,14 @@ async def chat_new(input: list[Message], context: Context) -> AsyncGenerator:
         ),
     )
 
-    extracted_files = await extract_files(context=context, incoming_messages=input)
+    history = [message async for message in context.session.load_history()]
+    extracted_files = await extract_files(history=history, incoming_messages=input)
+
+    FinalAnswerTool.description = "Sends the final answer to the user or ask a clarifying question."  # type: ignore
 
     # Base tool set
     tools = [
-        ThinkTool(),
+        ActTool(),
         WikipediaTool(),
         OpenMeteoTool(),
         DuckDuckGoSearchTool(),
@@ -166,31 +172,38 @@ async def chat_new(input: list[Message], context: Context) -> AsyncGenerator:
         ClarificationTool(),
     ]
 
+    requirements = [
+        # ConditionalRequirement(ActTool, force_at_step=1, consecutive_allowed=False),
+        ActAlwaysFirstRequirement(),
+    ]
+
     # Only add FileReaderTool if there are files
     if extracted_files:  # truthy when the list is non-empty
-        tools.append(create_file_reader_tool_class(extracted_files)())
+        file_reader_tool_class = create_file_reader_tool_class(extracted_files)
+        file_reader_tool = file_reader_tool_class()
+        tools.append(file_reader_tool)
+
+    local_settings = LocalSettings()
+    OpenAIChatModel.tool_choice_support = {"none", "single", "auto"}
+    llm = OpenAIChatModel(
+        model_id=os.getenv("LLM_MODEL", "llama3.1"),
+        api_key=os.getenv("LLM_API_KEY", "dummy"),
+        base_url=os.getenv("LLM_API_BASE", "http://localhost:11434/v1"),
+        parameters=ChatModelParameters(
+            temperature=0.0,
+        ),
+    )
 
     agent = RequirementAgent(
         llm=llm,
         tools=tools,
-        requirements=[
-            ConditionalRequirement(
-                ThinkTool, force_at_step=1, force_after=Tool, consecutive_allowed=False
-            ),
-            ConditionalRequirement(
-                ThinkTool, force_after=WikipediaTool, consecutive_allowed=False
-            ),
-            ConditionalRequirement(
-                ThinkTool, force_after=OpenMeteoTool, consecutive_allowed=False
-            ),
-            ConditionalRequirement(
-                ThinkTool, force_after=DuckDuckGoSearchTool, consecutive_allowed=False
-            ),
+        requirements=requirements,
+        middlewares=[
+            GlobalTrajectoryMiddleware(included=[Tool]),
+            act_tool_middleware,
+            clarification_tool_middleware,
         ],
-        middlewares=[GlobalTrajectoryMiddleware(included=[Tool])],
     )
-
-    history = [message async for message in context.session.load_history()]
 
     framework_messages = [
         to_framework_message(message.role, str(message)) for message in history + input
@@ -210,7 +223,8 @@ async def chat_new(input: list[Message], context: Context) -> AsyncGenerator:
                 output=last_step.output.get_text_content() or None,  # type: ignore
                 error=last_step.error,  # type: ignore
             )
-            yield {"tool_{meta.trace.run_id}": str(last_tool_call)}
+            if meta.trace is not None:
+                yield {f"tool_{meta.trace.run_id}": str(last_tool_call)}
 
         if event.state.answer is not None:
             yield event.state.answer.text

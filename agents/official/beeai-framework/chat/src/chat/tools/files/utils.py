@@ -11,7 +11,7 @@ from chat.tools.files.model import FileChatInfo, OriginType
 
 
 async def extract_files(
-    context: Context,
+    history: list[Message],
     incoming_messages: list[Message],
 ) -> list[FileChatInfo]:
     """
@@ -25,7 +25,6 @@ async def extract_files(
         list[FileInfo]: A list of FileInfo objects containing file details.
     """
     # 1. Combine historical messages with the current turn
-    history = [msg async for msg in context.session.load_history()]
     all_messages = [*history, *incoming_messages]
 
     # 2. Flatten to all parts
@@ -129,9 +128,6 @@ def next_unused_filename(name: str, existing: Iterable[str]) -> str:
         i += 1
 
     return f"{base}({i}){ext}"
-
-
-
 
 
 def is_base64(s: str) -> bool:

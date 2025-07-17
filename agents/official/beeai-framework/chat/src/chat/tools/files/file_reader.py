@@ -3,19 +3,35 @@
 
 from typing import Any, Literal
 from beeai_framework.emitter import Emitter
-from beeai_framework.tools import StringToolOutput, Tool, ToolRunOptions, ToolOutput
+from beeai_framework.tools import (
+    JSONToolOutput,
+    StringToolOutput,
+    Tool,
+    ToolRunOptions,
+    ToolOutput,
+)
 from chat.helpers.platform import read_file
 from chat.tools.files.model import FileChatInfo
 from chat.tools.files.utils import format_size
+from litellm import file_content
 from pydantic import BaseModel, Field, create_model
+from rich.json import JSON
 
 
-class FileReaderToolOutput(StringToolOutput):
+class FileReaderToolResult(BaseModel):
+    file_content: str = Field(
+        ...,
+        description="Content of the file that has been read.",
+    )
+
+
+class FileReaderToolOutput(JSONToolOutput[FileReaderToolResult]):
     pass
 
 
 class FileReadInputBase(BaseModel):
     """Base class for file read input to enable proper typing"""
+
     filename: str
 
 
@@ -44,7 +60,8 @@ def create_file_reader_tool_class(files: list[FileChatInfo]) -> type[Tool]:
         """
         Reads and returns content of a file.
         """
-        name: str = "FileReader"
+
+        name: str = "file_reader"
         description: str = "Read content of one of the provided file."
 
         @property
@@ -75,7 +92,9 @@ def create_file_reader_tool_class(files: list[FileChatInfo]) -> type[Tool]:
                 raise ValueError("File content is None.")
 
             # wrap it in the expected output object
-            return FileReaderToolOutput(result=msg.content)
+            return FileReaderToolOutput(
+                result=FileReaderToolResult(file_content=msg.content)
+            )
 
         def _create_emitter(self) -> Emitter:
             return Emitter.root().child(
