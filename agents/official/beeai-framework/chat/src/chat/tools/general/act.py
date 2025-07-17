@@ -1,14 +1,14 @@
 # Copyright 2025 © BeeAI a Series of LF Projects, LLC
 # SPDX-License-Identifier: Apache-2.0
 
-import select
+from typing import Literal
 from beeai_framework.agents.experimental import (
     RequirementAgent,
     RequirementAgentRunState,
 )
 from beeai_framework.agents.experimental.events import RequirementAgentStartEvent
 from beeai_framework.agents.experimental.requirements import Requirement, Rule
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, create_model
 
 from beeai_framework.context import RunContext
 from beeai_framework.emitter import Emitter, EventMeta
@@ -43,6 +43,7 @@ class ActToolOutput(JSONToolOutput[ActToolResult]):
 class ActTool(Tool[ActToolInput]):
     name: str = "act"
     description: str = "Use whenever you want to use any tool."
+    _input_schema: type[BaseModel]
 
     def __init__(self, *, extra_instructions: str = "") -> None:
         super().__init__()
@@ -60,9 +61,31 @@ class ActTool(Tool[ActToolInput]):
         """Set the list of allowed tool names."""
         self._allowed_tools_names = allowed_tools_names
 
+        if not allowed_tools_names:
+            raise ValueError("Allowed tools names must not be empty.")
+
+        # Hack to create a dynamic input schema based on allowed tools
+        self._input_schema = create_model(
+            "ActToolInput",
+            thought=(
+                str,
+                Field(
+                    ...,
+                    description="Precisely describe why do you want to use the tool.",
+                ),
+            ),
+            selected_tool=(
+                Literal[tuple(tool_name for tool_name in allowed_tools_names)],
+                Field(
+                    ...,
+                    description=f"Select a tool from the following options: {allowed_tools_names}",
+                ),
+            ),
+        )
+
     @property
-    def input_schema(self) -> type[ActToolInput]:
-        return ActToolInput
+    def input_schema(self):
+        return self._input_schema
 
     async def _run(
         self, input: ActToolInput, options: ToolRunOptions | None, context: RunContext
