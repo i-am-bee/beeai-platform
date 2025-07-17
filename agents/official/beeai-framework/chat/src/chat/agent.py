@@ -135,7 +135,7 @@ def to_framework_message(role: str, content: str) -> beeai_framework.backend.Mes
             - **Event-Based Streaming** – Can send partial updates to clients as responses are generated.
             - **Customizable Configuration** – Users can enable or disable specific tools for enhanced responses.
             """
-        ),        
+        ),
     )
 )
 async def chat_new(input: list[Message], context: Context) -> AsyncGenerator:
@@ -144,15 +144,14 @@ async def chat_new(input: list[Message], context: Context) -> AsyncGenerator:
     and weather updates through integrated tools.
     """
 
-    # ensure the model is pulled before running
-    os.environ["OPENAI_API_BASE"] = os.getenv(
-        "LLM_API_BASE", "http://localhost:11434/v1"
-    )
-    os.environ["OPENAI_API_KEY"] = os.getenv("LLM_API_KEY", "dummy")
-
-    llm = ChatModel.from_name(
-        f"openai:{os.getenv('LLM_MODEL', 'llama3.1')}",
-        ChatModelParameters(temperature=0),
+    OpenAIChatModel.tool_choice_support = {"none", "single", "auto"}
+    llm = OpenAIChatModel(
+        model_id=os.getenv("LLM_MODEL", "llama3.1"),
+        api_key=os.getenv("LLM_API_KEY", "dummy"),
+        base_url=os.getenv("LLM_API_BASE", "http://localhost:11434/v1"),
+        parameters=ChatModelParameters(
+            temperature=0.0,
+        ),
     )
 
     extracted_files = await extract_files(context=context, incoming_messages=input)
@@ -164,7 +163,7 @@ async def chat_new(input: list[Message], context: Context) -> AsyncGenerator:
         OpenMeteoTool(),
         DuckDuckGoSearchTool(),
         FileGeneratorTool(),
-        ClarificationTool()
+        ClarificationTool(),
     ]
 
     # Only add FileReaderTool if there are files
@@ -186,7 +185,7 @@ async def chat_new(input: list[Message], context: Context) -> AsyncGenerator:
             ),
             ConditionalRequirement(
                 ThinkTool, force_after=DuckDuckGoSearchTool, consecutive_allowed=False
-            )
+            ),
         ],
         middlewares=[GlobalTrajectoryMiddleware(included=[Tool])],
     )
@@ -206,10 +205,10 @@ async def chat_new(input: list[Message], context: Context) -> AsyncGenerator:
         last_step = event.state.steps[-1] if event.state.steps else None
         if last_step and last_step.tool is not None:
             last_tool_call = AnyModel(
-                tool_name=last_step.tool.name, # type: ignore
-                input=last_step.input, # type: ignore
-                output=last_step.output.get_text_content() or None, # type: ignore
-                error=last_step.error, # type: ignore
+                tool_name=last_step.tool.name,  # type: ignore
+                input=last_step.input,  # type: ignore
+                output=last_step.output.get_text_content() or None,  # type: ignore
+                error=last_step.error,  # type: ignore
             )
             yield {"tool_{meta.trace.run_id}": str(last_tool_call)}
 
