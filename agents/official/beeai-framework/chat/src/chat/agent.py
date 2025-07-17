@@ -1,11 +1,9 @@
 # Copyright 2025 © BeeAI a Series of LF Projects, LLC
 # SPDX-License-Identifier: Apache-2.0
 
-from json import tool
 import os
 
 from beeai_framework.adapters.openai import OpenAIChatModel
-from beeai_framework.adapters.watsonx import WatsonxChatModel
 from beeai_framework.agents.experimental import RequirementAgent
 from beeai_framework.agents.experimental.events import (
     RequirementAgentStartEvent,
@@ -18,10 +16,7 @@ from beeai_framework.middleware.trajectory import GlobalTrajectoryMiddleware
 from beeai_framework.tools import Tool
 from beeai_framework.tools.think import ThinkTool
 from chat.tools.file_reader import create_file_reader_tool_class
-from chat.utils.adhoc_settings import AdhocSettings
 from chat.utils.files import extract_files
-from opentelemetry.propagate import extract
-from requests import api
 
 # os.environ.setdefault("OTEL_EXPORTER_OTLP_ENDPOINT", "http://127.0.0.1:6006")
 os.environ.setdefault("OTEL_SDK_DISABLED", "true")
@@ -33,24 +28,19 @@ from textwrap import dedent
 import beeai_framework
 from acp_sdk import (
     AnyModel,
-    GenericEvent,
     Message,
     Metadata,
     Link,
     LinkType,
     Annotations,
 )
-from acp_sdk.models import MessagePart
 from acp_sdk.server import Context, Server
 from acp_sdk.models.platform import PlatformUIAnnotation, PlatformUIType, AgentToolInfo
 
-from beeai_framework.agents.react import ReActAgentUpdateEvent
 from beeai_framework.backend import AssistantMessage, UserMessage
 from beeai_framework.backend.chat import ChatModel, ChatModelParameters
-from beeai_framework.memory import UnconstrainedMemory
 from beeai_framework.tools.search.duckduckgo import DuckDuckGoSearchTool
 from beeai_framework.tools.search.wikipedia import WikipediaTool
-from beeai_framework.tools.tool import AnyTool
 from beeai_framework.tools.weather.openmeteo import OpenMeteoTool
 from pydantic import AnyUrl
 from openinference.instrumentation.beeai import BeeAIInstrumentor
@@ -65,7 +55,6 @@ logging.getLogger("opentelemetry.exporter.otlp.proto.http.metric_exporter").setL
 )
 
 server = Server()
-settings = AdhocSettings()
 
 
 def to_framework_message(role: str, content: str) -> beeai_framework.backend.Message:
@@ -172,26 +161,10 @@ async def chat_new(input: list[Message], context: Context) -> AsyncGenerator:
     )
     os.environ["OPENAI_API_KEY"] = os.getenv("LLM_API_KEY", "dummy")
 
-    # OpenAIChatModel.tool_choice_support = {"none", "single", "auto"}
-    # llm = OpenAIChatModel(
-    #     "granite3.3:8b",
-    #     base_url=settings.rits_proxy_url,
-    #     api_key=settings.rits_api_key,
-    # )
-
-    # OpenAIChatModel.tool_choice_support = {"none", "single", "auto"}
-    # os.environ["OPENAI_API_BASE"] = "http://localhost:12345/api/v1/llm"
-    # llm = ChatModel.from_name(
-    #     f"openai:{os.getenv('LLM_MODEL', 'llama3.1')}",
-    #     ChatModelParameters(temperature=0),
-    # )
-
-    llm = WatsonxChatModel(
-        "ibm/granite-3-3-8b-instruct",
-        project_id=settings.watsonx_project_id,
-        region=settings.watsonx_region,
-        api_key=settings.watsonx_api_key,
-        parameters=ChatModelParameters(temperature=0.0),
+    OpenAIChatModel.tool_choice_support = {"none", "single", "auto"}
+    llm = ChatModel.from_name(
+        f"openai:{os.getenv('LLM_MODEL', 'llama3.1')}",
+        ChatModelParameters(temperature=0),
     )
 
     extracted_files = await extract_files(context=context, incoming_messages=input)
