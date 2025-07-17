@@ -1,3 +1,6 @@
+# Copyright 2025 © BeeAI a Series of LF Projects, LLC
+# SPDX-License-Identifier: Apache-2.0
+
 from pydantic import BaseModel, Field
 from beeai_framework.tools import Tool, ToolRunOptions, StringToolOutput
 from beeai_framework.context import RunContext
