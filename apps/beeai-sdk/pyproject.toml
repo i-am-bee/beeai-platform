@@ -1,0 +1,54 @@
+[project]
+name = "beeai-sdk"
+version = "0.1.0"
+description = "BeeAI SDK"
+readme = "README.md"
+authors = [
+    { name = "Jan Pokorný", email = "JenomPokorny@gmail.com" }
+]
+requires-python = ">=3.11"
+dependencies = [
+    "a2a-sdk>=0.2.12",
+    "beeai-framework[duckduckgo,openmeteo,wikipedia]>=0.1.30",
+    "objprint>=0.3.0",
+    "openinference-instrumentation>=0.1.35",
+    "openinference-instrumentation-beeai>=0.1.6",
+    "uvicorn>=0.35.0",
+]
+
+[build-system]
+requires = ["uv_build>=0.7.12,<0.8.0"]
+build-backend = "uv_build"
+
+[tool.ruff]
+line-length = 120
+target-version = "py313"
+lint.select = [
+    "E",     # pycodestyle errors
+    "W",     # pycodestyle warnings
+    "F",     # pyflakes
+    "UP",    # pyupgrade
+    "I",     # isort
+    "B",     # bugbear
+    "N",     # pep8-naming
+    "C4",    # Comprehensions
+    "Q",     # Quotes
+    "SIM",   # Simplify
+    "RUF",   # Ruff
+    "TID",   # tidy-imports
+    "ASYNC", # async
+# TODO: add "DTZ",   # DatetimeZ
+# TODO: add "ANN",   # annotations
+]
+lint.ignore = [
+    "E501", # line lenght (annyoing)
+    "N999", # invalid module name beeai-server (yeah, we use a dash, deal with it)
+]
+force-exclude = true
+exclude = ["tests"]
+
+[dependency-groups]
+dev = [
+    "pyright>=1.1.403",
+    "ruff>=0.12.3",
+]
