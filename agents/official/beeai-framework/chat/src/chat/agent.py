@@ -18,7 +18,7 @@ from opentelemetry.propagate import extract
 from requests import api
 
 # os.environ.setdefault("OTEL_EXPORTER_OTLP_ENDPOINT", "http://127.0.0.1:6006")
-# os.environ.setdefault("OTEL_SDK_DISABLED", "true")
+os.environ.setdefault("OTEL_SDK_DISABLED", "true")
 
 import logging
 from collections.abc import AsyncGenerator
@@ -105,7 +105,7 @@ def to_framework_message(role: str, content: str) -> beeai_framework.backend.Mes
 
             ## How It Works
             The agent processes incoming messages and maintains a conversation history using an **unconstrained 
-            memory module**. It utilizes a language model (\`CHAT_MODEL\`) to generate responses and can optionally 
+            memory module**. It utilizes a language model (`CHAT_MODEL`) to generate responses and can optionally 
             integrate external tools for additional functionality.
 
             It supports:
@@ -158,17 +158,17 @@ async def chat_new(input: list[Message], context: Context) -> AsyncGenerator:
     os.environ["OPENAI_API_KEY"] = os.getenv("LLM_API_KEY", "dummy")
 
     OpenAIChatModel.tool_choice_support = {"none", "single", "auto"}
-    llm = OpenAIChatModel(
-        "granite3.3:8b",
-        base_url="PROXY_URL",
-        api_key="RITS-API-KEY",
-    )
-
-    # os.environ["OPENAI_API_BASE"] = "http://localhost:12345/api/v1/llm"
-    # llm = ChatModel.from_name(
-    #     f"openai:{os.getenv('LLM_MODEL', 'llama3.1')}",
-    #     ChatModelParameters(temperature=0),
+    # llm = OpenAIChatModel(
+    #     "granite3.3:8b",
+    #     base_url="PROXY_URL",
+    #     api_key="RITS-API-KEY",
     # )
+
+    # # os.environ["OPENAI_API_BASE"] = "http://localhost:12345/api/v1/llm"
+    llm = ChatModel.from_name(
+        f"openai:{os.getenv('LLM_MODEL', 'llama3.1')}",
+        ChatModelParameters(temperature=0),
+    )
 
 
     extracted_files = await extract_files(context=context, incoming_messages=input)
@@ -216,7 +216,7 @@ async def chat_new(input: list[Message], context: Context) -> AsyncGenerator:
                 output=last_step.output,
                 error=last_step.error,
             )
-            yield GenericEvent(type=f"tool_{meta.trace.run_id}", generic=last_tool_call)
+            yield { "tool_{meta.trace.run_id}": last_tool_call }            
 
         if event.state.answer is not None:
             yield event.state.answer.text
