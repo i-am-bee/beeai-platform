@@ -5,7 +5,7 @@ import logging
 import uuid
 from collections.abc import AsyncIterable
 from contextlib import AsyncExitStack
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 from typing import NamedTuple
 
 import fastapi
@@ -17,6 +17,7 @@ from beeai_server.configuration import Configuration
 from beeai_server.domain.models.mcp_provider import McpProviderDeploymentState, McpProviderLocation
 from beeai_server.domain.models.user import User
 from beeai_server.domain.utils import bridge_k8s_to_localhost, bridge_localhost_to_k8s
+from beeai_server.exceptions import EntityNotFoundError
 from beeai_server.service_layer.services.users import UserService
 
 logger = logging.getLogger(__name__)
@@ -53,9 +54,9 @@ class McpService:
 
     # Providers
 
-    async def create_provider(self, *, location: McpProviderLocation) -> McpProvider:
+    async def create_provider(self, *, name: str, location: McpProviderLocation) -> McpProvider:
         response = await self._client.post(
-            "/gateways", json={"name": str(uuid.uuid4()), "url": str(bridge_localhost_to_k8s(location.root))}
+            "/gateways", json={"name": name, "url": str(bridge_localhost_to_k8s(location.root))}
         )
         gateway = response.raise_for_status().json()
         return self._gateway_to_provider(gateway)
@@ -90,19 +91,31 @@ class McpService:
     # Toolkits
 
     async def create_toolkit(self, *, tools: list[str]) -> Toolkit:
-        response = await self._client.post("/servers", json={"name": str(uuid.uuid4()), "associatedTools": tools})
+        available_tools = await self.list_tools()
+        available_tools_by_name = {tool.name: tool for tool in available_tools}
+
+        associated_tools = []
+        for tool in tools:
+            if tool in available_tools_by_name:
+                associated_tools.append(available_tools_by_name[tool].id)
+            else:
+                raise EntityNotFoundError("tool", tool)
+
+        response = await self._client.post(
+            "/servers", json={"name": str(uuid.uuid4()), "associatedTools": associated_tools}
+        )
         server = response.raise_for_status().json()
+
         id = server["id"]
-        exp = self._config.mcp.toolkit_expiration_seconds
+        expires_at = datetime.now(UTC) + timedelta(seconds=self._config.mcp.toolkit_expiration_seconds)
 
         from beeai_server.jobs.tasks.mcp import delete_toolkit  # Avoid circual import
 
-        await delete_toolkit.configure(queueing_lock=id, schedule_in={"seconds": exp}).defer_async(toolkit_id=id)
+        await delete_toolkit.configure(queueing_lock=id, schedule_at=expires_at).defer_async(toolkit_id=id)
 
         return Toolkit(
-            id=id,
-            tools=server["associatedTools"],
-            streamable_http_url=f"http://{self._config.platform_service_url}/api/v1/mcp/toolkits/{id}/mcp?exp={exp}",
+            url=f"http://{self._config.platform_service_url}/api/v1/mcp/toolkits/{id}/mcp",
+            expires_at=expires_at,
         )
 
     async def delete_toolkit(self, *, toolkit_id: str) -> None:

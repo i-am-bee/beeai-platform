@@ -16,7 +16,7 @@ async def create_provider(
     mcp_service: McpServiceDependency,
     _: AdminUserDependency,
 ):
-    provider = await mcp_service.create_provider(location=request.location)
+    provider = await mcp_service.create_provider(name=request.name, location=request.location)
     return provider
 
 
