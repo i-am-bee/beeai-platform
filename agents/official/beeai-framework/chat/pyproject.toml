@@ -8,7 +8,7 @@ authors = [
 requires-python = ">=3.13,<4"
 dependencies = [
     "acp-sdk==1.0.0",
-    "beeai-framework[duckduckgo,wikipedia]~=0.1.29",
+    "beeai-framework[duckduckgo,wikipedia]~=0.1.30",
     "openinference-instrumentation-beeai>=0.1.6",
     "pydantic-settings>=2.9.0",
 ]
