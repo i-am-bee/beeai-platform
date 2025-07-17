@@ -4,8 +4,12 @@
 import os
 
 from beeai_framework.adapters.openai import OpenAIChatModel
+from beeai_framework.adapters.watsonx import WatsonxChatModel
 from beeai_framework.agents.experimental import RequirementAgent
-from beeai_framework.agents.experimental.events import RequirementAgentStartEvent, RequirementAgentSuccessEvent
+from beeai_framework.agents.experimental.events import (
+    RequirementAgentStartEvent,
+    RequirementAgentSuccessEvent,
+)
 from beeai_framework.agents.experimental.requirements.conditional import (
     ConditionalRequirement,
 )
@@ -13,6 +17,7 @@ from beeai_framework.middleware.trajectory import GlobalTrajectoryMiddleware
 from beeai_framework.tools import Tool
 from beeai_framework.tools.think import ThinkTool
 from chat.tools.file_reader import FileReaderTool
+from chat.utils.adhoc_settings import AdhocSettings
 from chat.utils.files import extract_files
 from opentelemetry.propagate import extract
 from requests import api
@@ -25,7 +30,15 @@ from collections.abc import AsyncGenerator
 from textwrap import dedent
 
 import beeai_framework
-from acp_sdk import AnyModel, GenericEvent, Message, Metadata, Link, LinkType, Annotations
+from acp_sdk import (
+    AnyModel,
+    GenericEvent,
+    Message,
+    Metadata,
+    Link,
+    LinkType,
+    Annotations,
+)
 from acp_sdk.models import MessagePart
 from acp_sdk.server import Context, Server
 from acp_sdk.models.platform import PlatformUIAnnotation, PlatformUIType, AgentToolInfo
@@ -51,6 +64,7 @@ logging.getLogger("opentelemetry.exporter.otlp.proto.http.metric_exporter").setL
 )
 
 server = Server()
+settings = AdhocSettings()
 
 
 def to_framework_message(role: str, content: str) -> beeai_framework.backend.Message:
@@ -157,19 +171,25 @@ async def chat_new(input: list[Message], context: Context) -> AsyncGenerator:
     )
     os.environ["OPENAI_API_KEY"] = os.getenv("LLM_API_KEY", "dummy")
 
-    OpenAIChatModel.tool_choice_support = {"none", "single", "auto"}
+    # OpenAIChatModel.tool_choice_support = {"none", "single", "auto"}
     # llm = OpenAIChatModel(
     #     "granite3.3:8b",
-    #     base_url="PROXY_URL",
-    #     api_key="RITS-API-KEY",
+    #     base_url=settings.rits_proxy_url,
+    #     api_key=settings.rits_api_key,
     # )
 
-    # # os.environ["OPENAI_API_BASE"] = "http://localhost:12345/api/v1/llm"
-    llm = ChatModel.from_name(
-        f"openai:{os.getenv('LLM_MODEL', 'llama3.1')}",
-        ChatModelParameters(temperature=0),
-    )
+    # os.environ["OPENAI_API_BASE"] = "http://localhost:12345/api/v1/llm"
+    # llm = ChatModel.from_name(
+    #     f"openai:{os.getenv('LLM_MODEL', 'llama3.1')}",
+    #     ChatModelParameters(temperature=0),
+    # )
 
+    llm = WatsonxChatModel(
+        "ibm/granite-3-3-8b-instruct",
+        project_id=settings.watsonx_project_id,
+        region=settings.watsonx_region,
+        api_key=settings.watsonx_api_key,
+    )
 
     extracted_files = await extract_files(context=context, incoming_messages=input)
 
@@ -182,8 +202,10 @@ async def chat_new(input: list[Message], context: Context) -> AsyncGenerator:
     ]
 
     # Only add FileReaderTool if there are files
-    if extracted_files:                       # truthy when the list is non-empty
-        tools.append(FileReaderTool(extracted_files))        # or FileReaderTool(files=extracted_files) if it takes the files
+    if extracted_files:  # truthy when the list is non-empty
+        tools.append(
+            FileReaderTool(extracted_files)
+        )  # or FileReaderTool(files=extracted_files) if it takes the files
 
     agent = RequirementAgent(
         llm=llm,
@@ -216,7 +238,7 @@ async def chat_new(input: list[Message], context: Context) -> AsyncGenerator:
                 output=last_step.output,
                 error=last_step.error,
             )
-            yield { "tool_{meta.trace.run_id}": last_tool_call }            
+            yield {"tool_{meta.trace.run_id}": last_tool_call}
 
         if event.state.answer is not None:
             yield event.state.answer.text
