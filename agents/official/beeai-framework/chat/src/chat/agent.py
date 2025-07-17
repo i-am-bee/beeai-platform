@@ -2,10 +2,8 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import os
-from dotenv import load_dotenv
 from pydantic import BaseModel, Field
 
-load_dotenv()
 
 from beeai_framework.adapters.openai import OpenAIChatModel
 from beeai_framework.agents.experimental import RequirementAgent
