@@ -1,0 +1,23 @@
+[project]
+name = "rag-agent"
+version = "0.1.0"
+authors = [
+    { name = "IBM Corp." },
+]
+requires-python = ">=3.13"
+dependencies = [
+    "acp-sdk>=1.0.0",
+    "tenacity>=9.1.2",
+    "langchain-text-splitters>=0.3.0",
+    "openinference-instrumentation-beeai>=0.1.6",
+    "beeai-framework[duckduckgo,wikipedia]>=0.1.29",
+]
+
+[project.scripts]
+server = "rag_agent.agent:run"
+
+[build-system]
+requires = [
+    "hatchling",
+]
+build-backend = "hatchling.build"
