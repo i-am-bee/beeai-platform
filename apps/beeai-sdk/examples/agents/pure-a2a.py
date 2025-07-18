@@ -27,9 +27,9 @@ import uvicorn
 class ChatAgentExecutor(a2a.server.agent_execution.AgentExecutor):
     def __init__(self):
         super().__init__()
-        self.context_memory: collections.defaultdict[
-            str, beeai_framework.memory.UnconstrainedMemory
-        ] = collections.defaultdict(beeai_framework.memory.UnconstrainedMemory)
+        self.context_memory: collections.defaultdict[str, beeai_framework.memory.UnconstrainedMemory] = (
+            collections.defaultdict(beeai_framework.memory.UnconstrainedMemory)
+        )
 
     async def cancel(
         self, context: a2a.server.agent_execution.RequestContext, event_queue: a2a.server.events.EventQueue
@@ -60,6 +60,7 @@ class ChatAgentExecutor(a2a.server.agent_execution.AgentExecutor):
         await self.context_memory[context.context_id].add(beeai_framework.backend.UserMessage(context.get_user_input()))
 
         context.current_task = a2a.utils.new_task(context.message)
+        assert context.task_id is not None
         updater = a2a.server.tasks.TaskUpdater(event_queue, context.task_id, context.context_id)
         try:
             final_answer = ""
@@ -75,9 +76,11 @@ class ChatAgentExecutor(a2a.server.agent_execution.AgentExecutor):
 
                         await updater.update_status(
                             state=a2a.types.TaskState.working,
-                            message=updater.new_agent_message(parts=[a2a.types.Part(root=a2a.types.TextPart(text=update))]),
+                            message=updater.new_agent_message(
+                                parts=[a2a.types.Part(root=a2a.types.TextPart(text=update))]
+                            ),
                         )
-            self.context_memory[context.context_id].add(beeai_framework.backend.AssistantMessage(final_answer))
+            await self.context_memory[context.context_id].add(beeai_framework.backend.AssistantMessage(final_answer))
             await updater.complete()
         except BaseException as e:
             await updater.failed(
