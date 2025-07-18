@@ -1,0 +1,205 @@
+---
+title: "RAG"
+description: "Platform-provided infrastructure for building RAG applications"
+---
+
+BeeAI Platform provides infrastructure to support RAG (Retrieval-Augmented Generation) functionality. This includes built-in services for document processing, vector storage, embedding generation, and semantic search - all designed to make it easy to build powerful RAG agents.
+
+## Platform Services
+
+### File Management & Text Extraction
+
+The platform automatically handles file upload and text extraction:
+
+- **File Upload API**: Upload documents through the `/api/v1/files` endpoint
+- **Text Extraction**: Automatic text extraction from uploaded files (PDF, DOC, etc.)
+- **File Content Access**: Access extracted text content via `/api/v1/files/{file_id}/text_content`
+
+### Vector Storage
+
+Built-in vector database services for semantic search:
+
+- **Vector Store Creation**: Create vector stores via `/api/v1/vector_stores`
+- **Automatic Embedding**: Generate embeddings using the platform's embedding model
+- **Document Indexing**: Store document chunks with their embeddings and metadata
+- **Semantic Search**: Perform similarity searches via `/api/v1/vector_stores/{id}/search`
+
+### Embedding Services
+
+The platform provides embedding generation through:
+
+- **Embedding API**: Generate embeddings via `/api/v1/llm/embeddings`
+- **Model**: Uses `text-embedding-model` by default
+- **Batch Processing**: Support for embedding multiple texts at once
+
+## Building RAG Agents
+
+### Using the Agent Starter Template
+
+Start building your RAG agent using the [BeeAI Platform Agent Starter](https://github.com/i-am-bee/beeai-platform-agent-starter):
+
+```bash
+# Clone the starter template
+git clone https://github.com/i-am-bee/beeai-platform-agent-starter.git my-rag-agent
+cd my-rag-agent
+
+# Install dependencies
+uv sync
+
+# Start implementing your RAG logic
+```
+
+### Key Components for RAG Agents
+
+#### 1. Vector Store Management
+
+```python
+async def create_vector_store(client: httpx.AsyncClient) -> str:
+    """Create a new vector store and return its ID."""
+    # Get embedding dimensions
+    response = await client.post("llm/embeddings", json={
+        "model": "text-embedding-model", 
+        "input": "dummy"
+    })
+    response.raise_for_status()
+    dimension = len(response.json()["data"][0]["embedding"])
+    
+    # Create vector store
+    response = await client.post("vector_stores", json={
+        "name": "my-rag-store",
+        "dimension": dimension,
+        "model_id": "text-embedding-model",
+    })
+    response.raise_for_status()
+    return response.json()["id"]
+```
+
+#### 2. Document Processing
+
+```python
+async def chunk_and_embed(client: httpx.AsyncClient, file_id: str, vector_store_id: str):
+    """Extract text, chunk it, and store in vector database."""
+    # Get text content
+    response = await client.get(f"files/{file_id}/text_content")
+    response.raise_for_status()
+    text = response.text
+    
+    # Chunk the text
+    from langchain_text_splitters import RecursiveCharacterTextSplitter
+    text_splitter = RecursiveCharacterTextSplitter(
+        chunk_size=1000,
+        chunk_overlap=200,
+        length_function=len,
+    )
+    chunks = text_splitter.split_text(text)
+    
+    # Generate embeddings
+    embed_response = await client.post("llm/embeddings", json={
+        "model": "text-embedding-model", 
+        "input": chunks
+    })
+    embed_response.raise_for_status()
+    embeddings_data = embed_response.json()
+    
+    # Store in vector database
+    vector_items = []
+    for i, (chunk, embedding_data) in enumerate(zip(chunks, embeddings_data["data"])):
+        vector_items.append({
+            "document_id": file_id,
+            "document_type": "platform_file",
+            "model_id": "text-embedding-model",
+            "text": chunk,
+            "embedding": embedding_data["embedding"],
+            "metadata": {
+                "file_id": file_id,
+                "chunk_index": str(i),
+                "chunk_id": str(uuid.uuid4()),
+                "total_chunks": str(len(chunks)),
+            },
+        })
+    
+    # Upload to vector store
+    await client.put(f"vector_stores/{vector_store_id}", json=vector_items)
+```
+
+#### 3. Vector Search Tool
+
+```python
+from beeai_framework.tools import Tool
+
+class VectorSearchTool(Tool):
+    """Tool for searching through indexed documents."""
+    
+    def __init__(self, vector_store_id: str):
+        self.vector_store_id = vector_store_id
+    
+    async def run(self, query: str, limit: int = 5):
+        async with httpx.AsyncClient(base_url=f"{PLATFORM_URL}/api/v1") as client:
+            # Generate embedding for query
+            embed_response = await client.post("llm/embeddings", json={
+                "model": "text-embedding-model", 
+                "input": query
+            })
+            embed_response.raise_for_status()
+            query_embedding = embed_response.json()["data"][0]["embedding"]
+            
+            # Search vector store
+            search_response = await client.post(
+                f"vector_stores/{self.vector_store_id}/search",
+                json={"query_vector": query_embedding, "limit": limit}
+            )
+            search_response.raise_for_status()
+            
+            # Return formatted results
+            results = []
+            for item in search_response.json().get("items", []):
+                results.append({
+                    "text": item["item"]["text"],
+                    "score": item["score"],
+                    "metadata": item["item"]["metadata"]
+                })
+            return results
+```
+
+#### 4. Complete RAG Agent
+
+```python
+from acp_sdk import MessagePart, Message
+from acp_sdk.server import Context, Server
+from beeai_framework.agents.react import ReActAgent
+from beeai_framework.adapters.openai import OpenAIChatModel
+
+@server.agent(
+    input_content_types=["text/plain", "application/pdf"],
+    output_content_types=["text/plain"],
+)
+async def rag_agent(input: list[Message], context: Context):
+    """RAG agent that searches through uploaded documents."""
+    
+    # Extract files from input
+    all_files = {part.content_url for msg in input for part in msg.parts 
+                 if part.content_url}
+    
+    tools = []
+    if all_files:
+        # Set up vector store and process files
+        async with platform_client() as client:
+            vector_store_id = await ensure_vectorstore(client, input)
+            await embed_all_files(client, all_files, vector_store_id)
+            tools.append(VectorSearchTool(vector_store_id))
+    
+    # Initialize LLM and agent
+    llm = OpenAIChatModel(
+        model_id=os.getenv("LLM_MODEL"),
+        base_url=os.getenv("LLM_API_BASE"),
+        api_key=os.getenv("LLM_API_KEY"),
+    )
+    
+    agent = ReActAgent(llm=llm, tools=tools)
+    
+    # Run the agent
+    async for data, event in agent.run():
+        if event.name == "partial_update":
+            if data.update.key == "final_answer":
+                yield MessagePart(content=data.update.value)
+```
