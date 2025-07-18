@@ -68,7 +68,7 @@ class ChatAgentExecutor(AgentExecutor):
         )
         os.environ["OPENAI_API_KEY"] = os.getenv("LLM_API_KEY", "dummy")
         llm = ChatModel.from_name(
-            f"openai:{os.getenv('LLM_MODEL', 'llama3.1:8b')}",
+            f"openai:{os.getenv('LLM_MODEL', 'llama3.1')}",
             ChatModelParameters(temperature=0),
         )
 
