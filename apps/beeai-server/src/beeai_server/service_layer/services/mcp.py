@@ -52,6 +52,13 @@ class McpService:
         self._config = configuration
         self._client = httpx.AsyncClient(base_url=str(self._config.mcp.gateway_endpoint_url), timeout=None)
 
+    async def __aenter__(self):
+        await self._client.__aenter__()
+        return self
+
+    async def __aexit__(self, exc_type, exc, tb):
+        await self._client.__aexit__(exc_type, exc, tb)
+
     # Providers
 
     async def create_provider(self, *, name: str, location: McpProviderLocation) -> McpProvider:

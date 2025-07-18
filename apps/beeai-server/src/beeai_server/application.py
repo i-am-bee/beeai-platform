@@ -42,6 +42,7 @@ from beeai_server.exceptions import (
     PlatformError,
 )
 from beeai_server.run_workers import run_workers
+from beeai_server.service_layer.services.mcp import McpService
 from beeai_server.telemetry import INSTRUMENTATION_NAME, shutdown_telemetry
 
 logger = logging.getLogger(__name__)
@@ -143,12 +144,13 @@ def app(*, dependency_overrides: Container | None = None) -> FastAPI:
 
     @asynccontextmanager
     @inject
-    async def lifespan(_app: FastAPI, procrastinate_app: procrastinate.App):
+    async def lifespan(_app: FastAPI, procrastinate_app: procrastinate.App, mcp_service: McpService):
         try:
             register_telemetry()
             async with procrastinate_app.open_async(), run_workers(app=procrastinate_app):
                 try:
-                    yield
+                    async with mcp_service:
+                        yield
                 finally:
                     shutdown_telemetry()
         except Exception as e:
