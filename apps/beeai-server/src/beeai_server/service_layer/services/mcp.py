@@ -17,7 +17,6 @@ from beeai_server.configuration import Configuration
 from beeai_server.domain.models.mcp_provider import McpProviderDeploymentState, McpProviderLocation
 from beeai_server.domain.models.user import User
 from beeai_server.domain.utils import bridge_k8s_to_localhost, bridge_localhost_to_k8s
-from beeai_server.exceptions import EntityNotFoundError
 from beeai_server.service_layer.services.users import UserService
 
 logger = logging.getLogger(__name__)
@@ -91,19 +90,7 @@ class McpService:
     # Toolkits
 
     async def create_toolkit(self, *, tools: list[str]) -> Toolkit:
-        available_tools = await self.list_tools()
-        available_tools_by_name = {tool.name: tool for tool in available_tools}
-
-        associated_tools = []
-        for tool in tools:
-            if tool in available_tools_by_name:
-                associated_tools.append(available_tools_by_name[tool].id)
-            else:
-                raise EntityNotFoundError("tool", tool)
-
-        response = await self._client.post(
-            "/servers", json={"name": str(uuid.uuid4()), "associatedTools": associated_tools}
-        )
+        response = await self._client.post("/servers", json={"name": str(uuid.uuid4()), "associatedTools": tools})
         server = response.raise_for_status().json()
 
         id = server["id"]
@@ -114,6 +101,7 @@ class McpService:
         await delete_toolkit.configure(queueing_lock=id, schedule_at=expires_at).defer_async(toolkit_id=id)
 
         return Toolkit(
+            id=id,
             url=f"http://{self._config.platform_service_url}/api/v1/mcp/toolkits/{id}/mcp",
             expires_at=expires_at,
         )
@@ -170,6 +158,7 @@ class McpService:
     def _gateway_to_provider(self, gateway: dict) -> McpProvider:
         return McpProvider(
             id=gateway["id"] or "missing-bug",  # TODO remove once fixed
+            name=gateway["name"],
             location=McpProviderLocation(bridge_k8s_to_localhost(gateway["url"])),
             state=self._gateway_to_provider_status(gateway),
         )

@@ -15,6 +15,7 @@ class CreateMcpProviderRequest(BaseModel):
 
 class McpProvider(BaseModel):
     id: str
+    name: str
     location: McpProviderLocation
     state: McpProviderDeploymentState
 
@@ -30,5 +31,6 @@ class CreateToolkitRequest(BaseModel):
 
 
 class Toolkit(BaseModel):
+    id: str
     url: AnyUrl
     expires_at: datetime

@@ -33,23 +33,28 @@ async def list_providers():
     """List providers."""
 
     providers = await api_request("GET", "mcp/providers")
-    console.print(providers)
-    # with create_table(
-    #     Column("ID"),
-    #     Column("Name"),
-    #     Column("Description", max_width=30),
-    #     no_wrap=True,
-    # ) as table:
-    #     for provider in providers:
-    #         table.add_row(tool["id"], tool["name"], tool["description"])
-    # console.print()
-    # console.print(table)
+    with create_table(
+        Column("Name"),
+        Column("Location", max_width=30),
+        Column("State"),
+        no_wrap=True,
+    ) as table:
+        for provider in providers:
+            table.add_row(provider["name"], provider["location"], provider["state"])
+    console.print()
+    console.print(table)
 
 
 @app.command("remove | uninstall | rm | delete")
-async def uninstall_provider(id: typing.Annotated[str, typer.Argument(help="ID of an MCP provider")]) -> None:
+async def uninstall_provider(
+    name: typing.Annotated[str, typer.Argument(help="Name of the MCP provider to remove")],
+) -> None:
     """Remove provider"""
-    await api_request("delete", f"mcp/providers/{id}")
+    provider = await _get_provider_by_name(name)
+    if provider:
+        await api_request("delete", f"mcp/providers/{provider['id']}")
+    else:
+        raise ValueError(f"Provider {name} not found")
     await list_providers()
 
 
@@ -75,8 +80,36 @@ async def toolkit(
 ) -> None:
     """Create a toolkit"""
 
-    toolkit = await api_request("POST", "mcp/toolkits", json={"tools": tools})
+    tools = await _get_tools_by_names(tools)
+    toolkit = await api_request("POST", "mcp/toolkits", json={"tools": [tool["id"] for tool in tools]})
     with create_table(Column("URL"), Column("Expiration")) as table:
         table.add_row(toolkit["url"], toolkit["expires_at"])
     console.print()
     console.print(table)
+
+
+async def _get_provider_by_name(name: str):
+    providers = await api_request("GET", "mcp/providers")
+
+    for provider in providers:
+        if provider["name"] == name:
+            return provider
+
+    raise ValueError(f"Provider {name} not found")
+
+
+async def _get_tools_by_names(names: list[str]):
+    all_tools = await api_request("GET", "mcp/tools")
+
+    tools = []
+    for name in names:
+        found = False
+        for tool in all_tools:
+            if tool["name"] == name:
+                tools.append(tool)
+                found = True
+                break
+        if not found:
+            raise ValueError(f"Tool {name} not found")
+
+    return tools
