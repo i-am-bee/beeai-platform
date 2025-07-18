@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-export type ActiveSource = {
-  id: string | null;
-  messageId: string;
-};
+export type TaskId = string;
+
+export type ContextId = string;

@@ -3,26 +3,18 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import type { TrajectoryMetadata } from '../api/types';
-import type { SourceReference } from '../sources/api/types';
-import type { Role } from '../types';
+import { Role } from '#modules/messages/api/types.ts';
+import { UISourcePart } from '#modules/messages/types.ts';
 
-interface Message {
+import type { TrajectoryMetadata } from '../api/types';
+export interface AgentMessage {
   key: string;
-  role: Role | string;
   content: string;
   error?: unknown;
   files?: MessageFile[];
-}
-export interface UserMessage extends Message {
-  role: Role.User;
-}
-export interface AgentMessage extends Message {
-  role: Role.Agent | string;
+  role: Role.Agent;
   rawContent: string;
   contentTransforms: MessageContentTransform[];
-  status: MessageStatus;
-  sources?: SourceReference[];
   trajectories?: TrajectoryMetadata[];
 }
 
@@ -41,16 +33,7 @@ export interface MessageContentTransform {
 
 export interface CitationTransform extends MessageContentTransform {
   kind: MessageContentTransformType.Citation;
-  sources: SourceReference[];
-}
-
-export type ChatMessage = UserMessage | AgentMessage;
-
-export enum MessageStatus {
-  InProgress = 'in-progress',
-  Completed = 'completed',
-  Aborted = 'aborted',
-  Failed = 'failed',
+  sources: UISourcePart[];
 }
 
 export enum MessageContentTransformType {

@@ -20,8 +20,8 @@ export function SourcesPanel() {
   const { activeSidePanel, closeSidePanel } = useApp();
   const { sourcesData, activeSource } = useSources();
 
-  const messageKey = activeSource?.messageKey;
-  const sources = messageKey ? (sourcesData[messageKey] ?? []) : [];
+  const messageId = activeSource?.messageId;
+  const sources = messageId ? (sourcesData[messageId] ?? []) : [];
   const hasSources = sources.length > 0;
 
   const isOpen = activeSidePanel === SidePanelVariant.Sources;

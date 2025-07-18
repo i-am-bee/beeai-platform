@@ -3,17 +3,18 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { MessageSendParams } from '@a2a-js/sdk';
+import { TaskIdParams } from '@a2a-js/sdk';
 import { useMutation } from '@tanstack/react-query';
 
-import { useAgentClient } from '../../contexts/agent-client';
-import { sendMessageStream } from '..';
+import { useAgentClient } from '#modules/runs/contexts/agent-client/index.ts';
 
-export function useSendMessageStream() {
+import { cancelTask } from '..';
+
+export function useCancelTask() {
   const { client } = useAgentClient();
 
   const mutation = useMutation({
-    mutationFn: (params: MessageSendParams) => sendMessageStream(client, params),
+    mutationFn: (params: TaskIdParams) => cancelTask(client, params),
     meta: {
       errorToast: false,
     },

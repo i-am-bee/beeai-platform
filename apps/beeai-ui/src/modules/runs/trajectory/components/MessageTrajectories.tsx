@@ -3,18 +3,19 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import type { AgentMessage } from '#modules/runs/chat/types.ts';
+import { UIAgentMessage } from '#modules/messages/types.ts';
+import { getMessageTrajectories } from '#modules/messages/utils.ts';
 
 import { TrajectoryView } from './TrajectoryView';
 
 interface Props {
-  message: AgentMessage;
+  message: UIAgentMessage;
   toggleable?: boolean;
   autoScroll?: boolean;
 }
 
 export function MessageTrajectories({ message, toggleable = true, autoScroll }: Props) {
-  const trajectories = message.trajectories ?? [];
+  const trajectories = getMessageTrajectories(message);
   const hasTrajectories = trajectories.length > 0;
 
   return hasTrajectories ? (

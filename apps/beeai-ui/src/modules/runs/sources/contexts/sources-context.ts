@@ -6,7 +6,8 @@
 
 import { createContext, type Dispatch, type SetStateAction } from 'react';
 
-import type { SourcesData } from '../api/types';
+import { SourcesData } from '#modules/sources/types.ts';
+
 import type { ActiveSource } from './types';
 
 export const SourcesContext = createContext<SourcesContextValue | undefined>(undefined);

@@ -5,12 +5,12 @@
 
 import { Container } from '#components/layouts/Container.tsx';
 import { AgentHeading } from '#modules/agents/components/AgentHeading.tsx';
+import { getMessageContent, isAgentMessage } from '#modules/messages/utils.ts';
 
 import { NewSessionButton } from '../components/NewSessionButton';
 import { useAgentRun } from '../contexts/agent-run';
 import { useMessages } from '../contexts/messages';
 import { MessageTrajectories } from '../trajectory/components/MessageTrajectories';
-import { isAgentMessage } from '../utils';
 import classes from './HandsOffOutputView.module.scss';
 import { HandsOffText } from './HandsOffText';
 import { TaskStatusBar } from './TaskStatusBar';
@@ -19,7 +19,7 @@ export function HandsOffOutputView() {
   const { agent, input, isPending, cancel, clear } = useAgentRun();
   const { messages } = useMessages();
   const message = messages.find(isAgentMessage);
-  const hasOutput = Boolean(message?.content);
+  const hasOutput = message ? Boolean(getMessageContent(message)) : false;
 
   return (
     <div className={classes.root}>

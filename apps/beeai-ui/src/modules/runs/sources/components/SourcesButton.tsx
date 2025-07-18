@@ -7,12 +7,12 @@ import { Button, SkeletonIcon } from '@carbon/react';
 import clsx from 'clsx';
 import pluralize from 'pluralize';
 
-import { useSource } from '../api/queries/useSource';
-import type { SourceReference } from '../api/types';
+import { UISourcePart } from '#modules/messages/types.ts';
+
 import classes from './SourcesButton.module.scss';
 
 interface Props {
-  sources: SourceReference[];
+  sources: UISourcePart[];
   isActive?: boolean;
   onClick?: () => void;
 }
@@ -24,7 +24,7 @@ export function SourcesButton({ sources, isActive, onClick }: Props) {
     <Button kind="tertiary" className={clsx(classes.root, { [classes.isActive]: isActive })} onClick={onClick}>
       <span className={classes.sources}>
         {sources.slice(0, 5).map((source) => (
-          <Source key={source.number} source={source} />
+          <Source key={source.id} source={source} />
         ))}
       </span>
 
@@ -34,24 +34,13 @@ export function SourcesButton({ sources, isActive, onClick }: Props) {
 }
 
 interface SourceProps {
-  source: SourceReference;
+  source: UISourcePart;
 }
 
 function Source({ source }: SourceProps) {
-  const { data, isPending } = useSource({ source });
+  const { title, faviconUrl } = source;
 
-  if (!data) {
-    return null;
-  }
-
-  const {
-    title,
-    metadata: { faviconUrl },
-  } = data;
-
-  return isPending ? (
-    <Source.Skeleton />
-  ) : faviconUrl ? (
+  return faviconUrl ? (
     <span className={classes.source}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={faviconUrl} className={classes.icon} alt={title ?? ''} />

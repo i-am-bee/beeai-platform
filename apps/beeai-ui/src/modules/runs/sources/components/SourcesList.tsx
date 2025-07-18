@@ -5,14 +5,14 @@
 
 import { useApp } from '#contexts/App/index.ts';
 import { SidePanelVariant } from '#contexts/App/types.ts';
+import { UISourcePart } from '#modules/messages/types.ts';
 
-import type { SourceReference } from '../api/types';
 import { useSources } from '../contexts';
 import { Source } from './Source';
 import classes from './SourcesList.module.scss';
 
 interface Props {
-  sources: SourceReference[];
+  sources: UISourcePart[];
 }
 
 export function SourcesList({ sources }: Props) {
@@ -22,11 +22,11 @@ export function SourcesList({ sources }: Props) {
   return sources.length > 0 ? (
     <ul className={classes.root}>
       {sources.map((source) => {
-        const { key, number } = source;
-        const isActive = activeSidePanel === SidePanelVariant.Sources && activeSource?.key === key;
+        const { id } = source;
+        const isActive = activeSidePanel === SidePanelVariant.Sources && activeSource?.id === id;
 
         return (
-          <li key={number}>
+          <li key={id}>
             <Source source={source} isActive={isActive} />
           </li>
         );

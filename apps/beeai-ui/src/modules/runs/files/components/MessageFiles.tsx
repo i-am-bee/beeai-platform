@@ -3,25 +3,26 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import type { ChatMessage } from '#modules/runs/chat/types.ts';
+import { UIMessage } from '#modules/messages/types.ts';
+import { getMessageFiles } from '#modules/messages/utils.ts';
 
 import { FileCard } from './FileCard';
 import { FileCardsList } from './FileCardsList';
 
 interface Props {
-  message: ChatMessage;
+  message: UIMessage;
   className?: string;
 }
 
 export function MessageFiles({ message, className }: Props) {
-  const files = message.files ?? [];
+  const files = getMessageFiles(message);
   const hasFiles = files.length > 0;
 
   return hasFiles ? (
     <FileCardsList className={className}>
-      {files.map(({ key, filename, href }) => (
-        <li key={key}>
-          <FileCard href={href} filename={filename} />
+      {files.map(({ id, filename, url }) => (
+        <li key={id}>
+          <FileCard href={url} filename={filename} />
         </li>
       ))}
     </FileCardsList>

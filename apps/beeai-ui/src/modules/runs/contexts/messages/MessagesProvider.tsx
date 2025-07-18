@@ -5,12 +5,12 @@
 
 import type { PropsWithChildren } from 'react';
 
-import type { ChatMessage } from '#modules/runs/chat/types.ts';
+import { UIMessage } from '#modules/messages/types.ts';
 
 import { MessagesContext } from './messages-context';
 
 interface Props {
-  messages: ChatMessage[];
+  messages: UIMessage[];
 }
 
 export function MessagesProvider({ messages, children }: PropsWithChildren<Props>) {

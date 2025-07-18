@@ -6,29 +6,17 @@
 import { SkeletonPlaceholder, SkeletonText } from '@carbon/react';
 import clsx from 'clsx';
 
-import { useSource } from '../api/queries/useSource';
-import type { SourceReference } from '../api/types';
-import { resolveSource } from '../utils';
+import { UISourcePart } from '#modules/messages/types.ts';
+
 import classes from './Source.module.scss';
 
 interface Props {
-  source: SourceReference;
+  source: UISourcePart;
   isActive?: boolean;
 }
 
 export function Source({ source, isActive }: Props) {
-  const { data, isPending } = useSource({ source });
-  const resolvedSource = resolveSource({ source, data });
-
-  if (isPending) {
-    return <Source.Skeleton />;
-  }
-
-  const {
-    number,
-    url,
-    metadata: { title, description, faviconUrl },
-  } = resolvedSource;
+  const { number, url, title, description, faviconUrl } = source;
 
   return (
     <article className={clsx(classes.root, { [classes.isActive]: isActive })}>

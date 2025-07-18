@@ -4,8 +4,9 @@
  */
 
 import { useAutoScroll } from '#hooks/useAutoScroll.ts';
+import { UIAgentMessage } from '#modules/messages/types.ts';
+import { checkMessageError, getMessageContent, getMessageSources } from '#modules/messages/utils.ts';
 
-import { type AgentMessage, MessageStatus } from '../chat/types';
 import { AgentOutputBox } from '../components/AgentOutputBox';
 import { MessageError } from '../components/MessageError';
 import { useAgentRun } from '../contexts/agent-run';
@@ -13,16 +14,18 @@ import { MessageFiles } from '../files/components/MessageFiles';
 import { MessageSources } from '../sources/components/MessageSources';
 
 interface Props {
-  message: AgentMessage;
+  message: UIAgentMessage;
   className?: string;
 }
 
 export function HandsOffText({ message, className }: Props) {
   const { agent, isPending } = useAgentRun();
-  const { content, status, sources = [] } = message;
-  const { ref: autoScrollRef } = useAutoScroll([content]);
 
-  const isError = status === MessageStatus.Failed || status === MessageStatus.Aborted;
+  const content = getMessageContent(message);
+  const sources = getMessageSources(message);
+  const isError = checkMessageError(message);
+
+  const { ref: autoScrollRef } = useAutoScroll([content]);
 
   return content || isError ? (
     <div className={className}>

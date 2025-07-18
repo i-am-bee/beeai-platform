@@ -8,23 +8,14 @@ import humanizeDuration from 'humanize-duration';
 import JSON5 from 'json5';
 import { v4 as uuid } from 'uuid';
 
+import { UISourcePart } from '#modules/messages/types.ts';
 import { isNotNull } from '#utils/helpers.ts';
 import { toMarkdownCitation, toMarkdownImage } from '#utils/markdown.ts';
 
-import type { Artifact, Message as ACPMessage, MessagePart } from './api/types';
-import {
-  type AgentMessage,
-  type ChatMessage,
-  type CitationTransform,
-  type MessageContentTransform,
-  MessageContentTransformType,
-  type UserMessage,
-} from './chat/types';
+import { type CitationTransform, type MessageContentTransform, MessageContentTransformType } from './chat/types';
 import type { UploadFileResponse } from './files/api/types';
 import type { FileEntity } from './files/types';
 import { getFileContentUrl } from './files/utils';
-import type { SourceReference } from './sources/api/types';
-import { Role } from './types';
 
 humanizeDuration.languages.shortEn = {
   h: () => 'h',
@@ -42,23 +33,6 @@ export function runDuration(ms: number) {
   });
 
   return duration;
-}
-
-export function createMessagePart({
-  content,
-  content_encoding = 'plain',
-  content_type = 'text/plain',
-  content_url,
-  name,
-}: Partial<Exclude<MessagePart, 'role'>>): MessagePart {
-  return {
-    content,
-    content_encoding,
-    content_type,
-    content_url,
-    name,
-    role: Role.User,
-  };
 }
 
 export function createFileParts(files: (UploadFileResponse & { type: string })[]): FilePart[] {
@@ -97,7 +71,7 @@ export function createImageTransform({
   };
 }
 
-export function createCitationTransform({ source }: { source: SourceReference }): CitationTransform {
+export function createCitationTransform({ source }: { source: UISourcePart }): CitationTransform {
   const { startIndex, endIndex } = source;
 
   return {
@@ -138,20 +112,6 @@ export function applyContentTransforms({
   return transformedContent;
 }
 
-export function isArtifactPart(part: MessagePart): part is Artifact {
-  return typeof part.name === 'string';
-}
-
-export function extractOutput(messages: ACPMessage[]) {
-  const output = messages
-    .flatMap(({ parts }) => parts)
-    .map(({ content }) => content)
-    .filter(isNotNull)
-    .join('');
-
-  return output;
-}
-
 export function extractValidUploadFiles(files: FileEntity[]) {
   const uploadFiles = files
     .map(({ uploadFile, originalFile: { type } }) => (uploadFile ? { ...uploadFile, type } : null))
@@ -173,14 +133,6 @@ export const parseJsonLikeString = (string: string): unknown | string => {
     return string;
   }
 };
-
-export function isAgentMessage(message: ChatMessage): message is AgentMessage {
-  return message.role === Role.Agent || message.role.startsWith(`${Role.Agent}/`);
-}
-
-export function isUserMessage(message: ChatMessage): message is UserMessage {
-  return message.role === Role.User;
-}
 
 export function extractTextFromParts(parts: Part[]): string {
   const text = parts

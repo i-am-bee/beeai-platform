@@ -17,13 +17,13 @@ export function remarkCitationLink() {
       const { url } = node;
 
       if (url.startsWith(CITATION_LINK_PREFIX)) {
-        const keys = url.slice(CITATION_LINK_PREFIX.length).split(',');
+        const items = url.slice(CITATION_LINK_PREFIX.length).split(',');
 
         node.data = {
           ...node.data,
           hName: 'citationLink',
           hProperties: {
-            keys,
+            items,
           } satisfies CitationLinkBaseProps,
         };
       }

@@ -5,33 +5,31 @@
 
 import { v4 as uuid } from 'uuid';
 
+import { UIAgentMessage, UIMessage, UIMessagePartKind, UISourcePart } from '#modules/messages/types.ts';
+import { getMessageSources } from '#modules/messages/utils.ts';
+import { SourcesData } from '#modules/sources/types.ts';
+
 import type { CitationMetadata } from '../api/types';
-import type { AgentMessage, ChatMessage } from '../chat/types';
-import { isAgentMessage } from '../utils';
-import type { ResolvedSource, SourceReference, SourcesData } from './api/types';
 
-export function resolveSource({ source, data }: { source: SourceReference; data: ResolvedSource | undefined }) {
-  return data ?? { ...source, metadata: { title: source.url } };
-}
-
-export function prepareMessageSources({ message, metadata }: { message: AgentMessage; metadata: CitationMetadata }) {
+export function prepareMessageSources({ message, metadata }: { message: UIAgentMessage; metadata: CitationMetadata }) {
   const { url, start_index, end_index, title, description } = metadata;
-  const { sources: prevSources = [] } = message;
+  const prevSources = getMessageSources(message);
 
   if (url == null || start_index == null || end_index == null) {
     return { sources: prevSources, newSource: undefined };
   }
 
-  const key = uuid();
+  const id = uuid();
 
-  const sources: SourceReference[] = [
+  const sources: UISourcePart[] = [
     ...prevSources,
     {
-      key,
+      kind: UIMessagePartKind.Source as const,
+      id,
       url,
+      messageId: message.id,
       startIndex: start_index,
       endIndex: end_index,
-      messageKey: message.key,
       title: title ?? undefined,
       description: description ?? undefined,
     },
@@ -42,22 +40,19 @@ export function prepareMessageSources({ message, metadata }: { message: AgentMes
       number: idx + 1,
     }));
 
-  const newSource = sources.find((source) => source.key === key);
+  const newSource = sources.find((source) => source.id === id);
 
   return { sources, newSource };
 }
 
-export function extractSources(messages: ChatMessage[]) {
-  const sources = messages.reduce<SourcesData>((data, message) => {
-    if (isAgentMessage(message) && message.sources) {
-      return {
-        ...data,
-        [message.key]: message.sources,
-      };
-    }
-
-    return data;
-  }, {});
+export function extractSources(messages: UIMessage[]) {
+  const sources = messages.reduce<SourcesData>(
+    (data, message) => ({
+      ...data,
+      [message.id]: getMessageSources(message),
+    }),
+    {},
+  );
 
   return sources;
 }

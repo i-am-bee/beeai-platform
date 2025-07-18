@@ -6,10 +6,10 @@
 
 import { createContext } from 'react';
 
-import type { ChatMessage } from '#modules/runs/chat/types.ts';
+import { UIMessage } from '#modules/messages/types.ts';
 
 export const MessagesContext = createContext<MessagesContextValue>({ messages: [] });
 
 type MessagesContextValue = {
-  messages: ChatMessage[];
+  messages: UIMessage[];
 };

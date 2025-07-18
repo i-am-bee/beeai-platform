@@ -81,7 +81,7 @@ export function ChatMessagesView() {
           <Container size="sm" asChild>
             <ol className={classes.messages} aria-label="messages">
               {messages.map((message) => (
-                <Message key={message.key} message={message} />
+                <Message key={message.id} message={message} />
               ))}
             </ol>
           </Container>
