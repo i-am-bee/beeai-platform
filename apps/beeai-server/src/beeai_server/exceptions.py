@@ -13,7 +13,9 @@ if TYPE_CHECKING:
 
 
 class PlatformError(Exception):
-    status_code: int = status.HTTP_500_INTERNAL_SERVER_ERROR
+    def __init__(self, message: str | None = None, status_code: int = status.HTTP_500_INTERNAL_SERVER_ERROR):
+        self.status_code = status_code
+        super().__init__(message or "An unexpected platform error occurred")
 
 
 class ManifestLoadError(PlatformError):
@@ -23,8 +25,7 @@ class ManifestLoadError(PlatformError):
         self, location: "ProviderLocation", message: str | None = None, status_code: int = status.HTTP_404_NOT_FOUND
     ):
         message = message or f"Manifest at location {location} not found"
-        self.status_code = status_code
-        super().__init__(message)
+        super().__init__(message, status_code)
 
 
 class EntityNotFoundError(PlatformError):
@@ -38,8 +39,7 @@ class EntityNotFoundError(PlatformError):
         self.entity = entity
         self.id = id
         self.attribute = attribute
-        self.status_code = status_code
-        super().__init__(f"{entity} with {attribute} {id} not found")
+        super().__init__(f"{entity} with {attribute} {id} not found", status_code)
 
 
 class InvalidVectorDimensionError(PlatformError): ...
@@ -47,14 +47,13 @@ class InvalidVectorDimensionError(PlatformError): ...
 
 class StorageCapacityExceededError(PlatformError):
     entity: str
-    status_code: int
 
     def __init__(self, entity: str, max_size: int, status_code: int = status.HTTP_413_REQUEST_ENTITY_TOO_LARGE):
         self.entity = entity
-        self.status_code = status_code
         super().__init__(
             f"{entity} exceeds the limit of {max_size / 1024 / 1024:.2f} MB. "
-            f"Either the {entity} is too large or you exceeded the available storage capacity."
+            f"Either the {entity} is too large or you exceeded the available storage capacity.",
+            status_code,
         )
 
 
@@ -66,8 +65,7 @@ class MissingConfigurationError(Exception):
 
 class UsageLimitExceededError(PlatformError):
     def __init__(self, message: str, status_code: int = status.HTTP_413_REQUEST_ENTITY_TOO_LARGE):
-        self.status_code = status_code
-        super().__init__(message)
+        super().__init__(message, status_code)
 
 
 class DuplicateEntityError(PlatformError):
@@ -85,11 +83,10 @@ class DuplicateEntityError(PlatformError):
         self.entity = entity
         self.field = field
         self.value = value
-        self.status_code = status_code
         message = f"Duplicate {entity} found"
         if value:
             message = f"{message}: {field}='{value}' already exists"
-        super().__init__(message)
+        super().__init__(message, status_code)
 
 
 def retry_if_exception_grp_type(*exception_types: type[BaseException]) -> retry_base:
@@ -106,3 +103,8 @@ def retry_if_exception_grp_type(*exception_types: type[BaseException]) -> retry_
         return retry
 
     return retry_if_exception(_fn)
+
+
+class GatewayError(PlatformError):
+    def __init__(self, message: str | None = None, status_code: int = status.HTTP_502_BAD_GATEWAY):
+        super().__init__(message, status_code)

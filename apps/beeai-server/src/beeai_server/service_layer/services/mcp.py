@@ -3,8 +3,8 @@
 
 import logging
 import uuid
-from collections.abc import AsyncIterable
-from contextlib import AsyncExitStack
+from collections.abc import AsyncGenerator, AsyncIterable
+from contextlib import AsyncExitStack, asynccontextmanager
 from datetime import UTC, datetime, timedelta
 from typing import NamedTuple
 
@@ -17,6 +17,7 @@ from beeai_server.configuration import Configuration
 from beeai_server.domain.models.mcp_provider import McpProviderDeploymentState, McpProviderLocation
 from beeai_server.domain.models.user import User
 from beeai_server.domain.utils import bridge_k8s_to_localhost, bridge_localhost_to_k8s
+from beeai_server.exceptions import EntityNotFoundError, GatewayError, PlatformError
 from beeai_server.service_layer.services.users import UserService
 
 logger = logging.getLogger(__name__)
@@ -54,44 +55,52 @@ class McpService:
     # Providers
 
     async def create_provider(self, *, name: str, location: McpProviderLocation) -> McpProvider:
-        response = await self._client.post(
-            "/gateways", json={"name": name, "url": str(bridge_localhost_to_k8s(location.root))}
-        )
-        gateway = response.raise_for_status().json()
-        return self._gateway_to_provider(gateway)
+        async with self.gateway_context() as client:
+            response = await client.post(
+                "/gateways", json={"name": name, "url": str(bridge_localhost_to_k8s(location.root))}
+            )
+            return self._gateway_to_provider(response.raise_for_status().json())
 
     async def list_providers(self) -> list[McpProvider]:
-        response = await self._client.get("/gateways")
-        gateways: list[dict] = response.raise_for_status().json()
-        return [self._gateway_to_provider(gateway) for gateway in gateways]
+        async with self.gateway_context() as client:
+            response = await client.get("/gateways")
+            gateways: list[dict] = response.raise_for_status().json()
+            return [self._gateway_to_provider(gateway) for gateway in gateways]
 
     async def read_provider(self, *, provider_id: str) -> McpProvider:
-        response = await self._client.get(f"/gateways/{provider_id}")
-        gateway = response.raise_for_status().json()
-        return self._gateway_to_provider(gateway)
+        async with self.gateway_context() as client:
+            response = await client.get(f"/gateways/{provider_id}")
+            return self._gateway_to_provider(response.raise_for_status().json())
 
     async def delete_provider(self, *, provider_id: str) -> None:
-        response = await self._client.delete(f"/gateways/{provider_id}")
-        response.raise_for_status()
-        return
+        async with self.gateway_context() as client:
+            response = await client.delete(f"/gateways/{provider_id}")
+            try:
+                response.raise_for_status()
+            except httpx.HTTPStatusError as err:
+                if err.response.status_code == fastapi.status.HTTP_404_NOT_FOUND:
+                    raise EntityNotFoundError("mcp_provider", provider_id) from err
+                raise
 
     # Tools
 
     async def list_tools(self) -> list[Tool]:
-        response = await self._client.get("/tools")
-        tools: list[dict] = response.raise_for_status().json()
-        return [Tool(id=tool["id"], name=tool["name"], description=tool["description"]) for tool in tools]
+        async with self.gateway_context() as client:
+            response = await client.get("/tools")
+            tools: list[dict] = response.raise_for_status().json()
+            return [self._to_tool(tool) for tool in tools]
 
     async def read_tool(self, *, tool_id: str) -> Tool:
-        response = await self._client.get(f"/tools/{tool_id}")
-        tool = response.raise_for_status().json()
-        return Tool(id=tool["id"], name=tool["name"], description=tool["description"])
+        async with self.gateway_context() as client:
+            response = await client.get(f"/tools/{tool_id}")
+            return self._to_tool(response.raise_for_status().json())
 
     # Toolkits
 
     async def create_toolkit(self, *, tools: list[str]) -> Toolkit:
-        response = await self._client.post("/servers", json={"name": str(uuid.uuid4()), "associatedTools": tools})
-        server = response.raise_for_status().json()
+        async with self.gateway_context() as client:
+            response = await client.post("/servers", json={"name": str(uuid.uuid4()), "associatedTools": tools})
+            server = response.raise_for_status().json()
 
         id = server["id"]
         expires_at = datetime.now(UTC) + timedelta(seconds=self._config.mcp.toolkit_expiration_seconds)
@@ -107,8 +116,9 @@ class McpService:
         )
 
     async def delete_toolkit(self, *, toolkit_id: str) -> None:
-        response = await self._client.delete(f"/servers/{toolkit_id}")
-        response.raise_for_status()
+        async with self.gateway_context() as client:
+            response = await client.delete(f"/servers/{toolkit_id}")
+            response.raise_for_status()
 
     # MCP Forwarding
 
@@ -168,3 +178,31 @@ class McpService:
             return McpProviderDeploymentState.running
         else:
             return McpProviderDeploymentState.missing
+
+    def _to_tool(self, tool: dict) -> Tool:
+        return Tool(id=tool["id"], name=tool["name"], description=tool["description"])
+
+    @asynccontextmanager
+    async def gateway_context(self) -> AsyncGenerator[httpx.AsyncClient]:
+        try:
+            yield self._client
+        except httpx.HTTPStatusError as err:
+            if err.response.status_code in {fastapi.status.HTTP_400_BAD_REQUEST, fastapi.status.HTTP_404_NOT_FOUND}:
+                raise GatewayError(message=await err.response.aread(), status_code=err.response.status_code) from err
+            logger.error(
+                "Status Error during Gateway context: %s - %s", err.response.status_code, await err.response.aread()
+            )
+            raise PlatformError() from err
+        except httpx.RequestError as err:
+            logger.error("Request error during Gateway context: %s", err)
+            raise GatewayError(status_code=fastapi.status.HTTP_503_SERVICE_UNAVAILABLE) from err
+        except ValueError as err:
+            # JSON decode error
+            logger.error("Error during Gateway context: %s", err)
+            raise GatewayError(
+                "Invalid response from upstream server",
+                status_code=fastapi.status.HTTP_502_BAD_GATEWAY,
+            ) from err
+        except Exception as err:
+            logger.error("Error during Gateway context: %s", err)
+            raise PlatformError() from err
