@@ -14,7 +14,6 @@ from beeai_framework.agents.experimental.events import (
 )
 import beeai_framework.backend
 from beeai_framework.middleware.trajectory import GlobalTrajectoryMiddleware
-from beeai_framework.tools import Tool
 from chat.tools.files.file_generator import FileGeneratorTool
 from chat.tools.files.file_reader import create_file_reader_tool_class
 from chat.tools.files.utils import extract_files
@@ -28,6 +27,7 @@ from chat.tools.general.clarification import (
     ClarificationTool,
     clarification_tool_middleware,
 )
+from chat.tools.general.current_time import CurrentTimeTool
 
 
 # os.environ.setdefault("OTEL_EXPORTER_OTLP_ENDPOINT", "http://127.0.0.1:6006")
@@ -170,6 +170,7 @@ async def chat_new(input: list[Message], context: Context) -> AsyncGenerator:
         DuckDuckGoSearchTool(),
         FileGeneratorTool(),
         ClarificationTool(),
+        CurrentTimeTool(),
     ]
 
     requirements = [

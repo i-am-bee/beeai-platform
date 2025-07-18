@@ -115,15 +115,45 @@ class ActAlwaysFirstRequirement(Requirement[RequirementAgentRunState]):
     @run_with_context
     async def run(self, state: RequirementAgentRunState, ctx: RunContext) -> list[Rule]:
         last_step = state.steps[-1] if state.steps else None
-        if last_step and last_step.tool.name == "act":
+        if last_step and last_step.tool and last_step.tool.name == "act":
             assert isinstance(last_step.tool, ActTool)
             if last_step.error is not None:
-                return [Rule(target="act", forced=True)]
+                return [
+                    Rule(
+                        target="act",
+                        forced=True,
+                        allowed=True,
+                        prevent_stop=False,
+                        hidden=False,
+                    )
+                ]
 
+            if last_step.output is None or not isinstance(
+                last_step.output, ActToolOutput
+            ):
+                raise ValueError(
+                    "Last step output must be an instance of ActToolOutput."
+                )
             selected_tool = last_step.output.result.selected_tool
-            return [Rule(target=selected_tool, forced=True)]
+            return [
+                Rule(
+                    target=selected_tool,
+                    forced=True,
+                    allowed=True,
+                    prevent_stop=False,
+                    hidden=False,
+                )
+            ]
 
-        return [Rule(target="act", forced=True)]
+        return [
+            Rule(
+                target="act",
+                forced=True,
+                allowed=True,
+                prevent_stop=False,
+                hidden=False,
+            )
+        ]
 
 
 def act_tool_middleware(ctx: RunContext) -> None:
@@ -134,7 +164,11 @@ def act_tool_middleware(ctx: RunContext) -> None:
         raise ValueError("ActTool is not found in the agent's tools.")
 
     def handle_start(data: RequirementAgentStartEvent, event: EventMeta) -> None:
-        allowed_tools = [t.name for t in data.request.tools if t.name != "act"]
+        allowed_tools = (
+            [t.name for t in data.request.tools if t.name != "act"]
+            if data.state.iteration == 1
+            else [t.name for t in data.request.allowed_tools if t.name != "act"]
+        )
         act_tool.allowed_tools_names = allowed_tools
 
     ctx.emitter.on("start", handle_start)
