@@ -18,6 +18,8 @@ dependencies = [
     "opentelemetry-exporter-otlp-proto-http>=1.35.0",
     "opentelemetry-instrumentation-fastapi>=0.56b0",
     "opentelemetry-sdk>=1.35.0",
+    "tenacity>=9.1.2",
+    "janus>=2.0.0",
 ]
 
 [build-system]

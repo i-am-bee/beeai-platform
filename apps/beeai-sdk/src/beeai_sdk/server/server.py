@@ -1,47 +1,47 @@
 import asyncio
 import functools
 import os
-from collections.abc import AsyncGenerator, Callable
-from contextlib import asynccontextmanager
+import re
+from collections.abc import AsyncGenerator, Awaitable, Callable
+from contextlib import asynccontextmanager, nullcontext, suppress
 from typing import Any
+from urllib.parse import urljoin
 
 import uvicorn
 from a2a.server.agent_execution import RequestContextBuilder
 from a2a.server.events import QueueManager
 from a2a.server.tasks import PushNotificationConfigStore, PushNotificationSender, TaskStore
+from a2a.types import AgentExtension
 from fastapi import FastAPI
+from fastapi.applications import AppType
+from httpx import AsyncClient, HTTPError, HTTPStatusError
+from starlette.types import Lifespan
+from tenacity import AsyncRetrying, retry_if_exception_type, stop_after_attempt, wait_exponential
 
 from beeai_sdk.server.agent import Agent
+from beeai_sdk.server.agent import agent as agent_decorator
 from beeai_sdk.server.logging import configure_logger as configure_logger_func
+from beeai_sdk.server.logging import logger
 from beeai_sdk.server.telemetry import configure_telemetry as configure_telemetry_func
+from beeai_sdk.server.utils import cancel_task
 
 
 class Server:
     def __init__(self) -> None:
-        self.agent: Agent | None = None
+        self._agent: Agent | None = None
         self.server: uvicorn.Server | None = None
 
-    def agent(
-        self,
-        name: str | None = None,
-        description: str | None = None,
-        *,
-        metadata: Metadata | None = None,
-    ) -> Callable:
+    @functools.wraps(agent_decorator)
+    def agent(self, *args, **kwargs) -> Callable:
         """Decorator to register an agent."""
-        if self.agent:
+        if self._agent:
             raise ValueError("Server can have only one agent.")
 
         def decorator(fn: Callable) -> Callable:
-            agent = agent_decorator(name=name, description=description, metadata=metadata)(fn)
-            self.register(agent)
+            self._agent = agent_decorator(*args, **kwargs)(fn)
             return fn
 
         return decorator
-
-    @asynccontextmanager
-    async def lifespan(self, app: FastAPI) -> AsyncGenerator[None]:
-        yield
 
     async def serve(
         self,
@@ -55,7 +55,7 @@ class Server:
         push_sender: PushNotificationSender | None = None,
         request_context_builder: RequestContextBuilder | None = None,
         host: str = "127.0.0.1",
-        port: int = 8000,
+        port: int = 10000,
         uds: str | None = None,
         fd: int | None = None,
         loop: uvicorn.config.LoopSetupType = "auto",
@@ -67,6 +67,7 @@ class Server:
         ws_ping_timeout: float | None = 20.0,
         ws_per_message_deflate: bool = True,
         lifespan: uvicorn.config.LifespanType = "auto",
+        lifespan_fn: Lifespan[AppType] | None = None,
         env_file: str | os.PathLike[str] | None = None,
         log_config: dict[str, Any]
         | str
@@ -118,9 +119,20 @@ class Server:
 
         from beeai_sdk.server.app import create_app
 
+        @asynccontextmanager
+        async def _lifespan_fn(app: FastAPI) -> AsyncGenerator[None, None]:
+            register_task = asyncio.create_task(self._register_agent()) if self_registration else None
+            try:
+                async with lifespan_fn(app) if lifespan_fn else nullcontext():
+                    yield
+            finally:
+                await cancel_task(register_task)
+
+        self._agent.card.url = f"http://{host}:{port}"
+
         app = create_app(
-            self.agent,
-            lifespan=self.lifespan,
+            self._agent,
+            lifespan=_lifespan_fn,
             task_store=task_store,
             queue_manager=queue_manager,
             push_config_store=push_config_store,
@@ -185,17 +197,11 @@ class Server:
             h11_max_incomplete_event_size,
         )
         self.server = uvicorn.Server(config)
-        await self._serve(self_registration=self_registration)
+        await self.server.serve()
 
     @functools.wraps(serve)
     def run(self, **kwargs) -> None:
         asyncio.run(self.serve(**kwargs))
-
-    async def _serve(self, self_registration: bool = True) -> None:
-        registration_task = asyncio.create_task(self._register_agent()) if self_registration else None
-        await self.server.serve()
-        if registration_task:
-            registration_task.cancel()
 
     @property
     def should_exit(self) -> bool:
@@ -213,50 +219,63 @@ class Server:
 
         url = os.getenv("PLATFORM_URL", "http://127.0.0.1:8333")
         host = re.sub(r"localhost|127\.0\.0\.1", "host.docker.internal", self.server.config.host)
-        request_data = {
-            "location": f"http://{host}:{self.server.config.port}",
-        }
+        request_data = {"location": f"http://{host}:{self.server.config.port}"}
         try:
-            await async_request_with_retry(lambda client, data=request_data: client.get(f"{url}/api/v1/providers"))
-            await async_request_with_retry(
-                lambda client, data=request_data: client.post(
-                    f"{url}/api/v1/providers", json=data, params={"auto_remove": True}
-                )
-            )
-            logger.debug("Agent registered to the beeai server.")
+            async with AsyncClient(base_url=urljoin(url, "/api/v1/")) as client:
+                async for attempt in AsyncRetrying(
+                    stop=stop_after_attempt(10),
+                    wait=wait_exponential(max=10),
+                    retry=retry_if_exception_type(HTTPError),
+                    reraise=True,
+                ):
+                    with attempt:
+                        resp = await client.get("providers")
+                        resp.raise_for_status()
 
-            # check missing env keyes
-            envs_request = await async_request_with_retry(lambda client: client.get(f"{url}/api/v1/variables"))
-            envs = envs_request.get("env")
-            os.environ["LLM_MODEL"] = "dummy"
-            os.environ["LLM_API_KEY"] = "dummy"
-            os.environ["LLM_API_BASE"] = f"{url.rstrip('/')}/api/v1/llm"
+                        resp = await client.post("providers", json=request_data, params={"auto_remove": True})
+                        resp.raise_for_status()
 
-            for agent in self.agents:
-                # register all available envs
-                missing_keyes = []
-                for env in agent.metadata.model_dump().get("env", []):
-                    # Those envs are set to use LLM gateway from platform server
-                    if env["name"] in {"LLM_MODEL", "LLM_API_KEY", "LLM_API_BASE"}:
-                        continue
-                    server_env = envs.get(env.get("name"))
-                    if server_env:
-                        logger.debug(f"Env variable {env['name']} = '{server_env}' added dynamically")
-                        os.environ[env["name"]] = server_env
-                    elif env.get("required"):
-                        missing_keyes.append(env)
-                if len(missing_keyes):
-                    logger.debug(f"Can not run agent, missing required env variables: {missing_keyes}")
-                    raise Exception("Missing env variables")
+                        logger.debug("Agent registered to the beeai server.")
 
-        except requests.exceptions.ConnectionError as e:
-            logger.debug(f"Can not reach server, check if running on {url} : {e}")
-        except (requests.exceptions.HTTPError, Exception) as e:
-            try:
-                error_message = e.response.json().get("detail")
-                if error_message:
+                        env_resp = await client.get("variables")
+                        envs_request = env_resp.raise_for_status().json()
+
+                        envs = envs_request.get("env")
+                        os.environ["LLM_MODEL"] = "dummy"
+                        os.environ["LLM_API_KEY"] = "dummy"
+                        os.environ["LLM_API_BASE"] = f"{url.rstrip('/')}/api/v1/llm"
+
+                for extension in self._agent.card.capabilities.extensions or []:
+                    # TODO - env extension?
+                    match extension:
+                        case AgentExtension(
+                            uri="https://a2a-extensions.beeai.dev/variables",
+                            params=params,
+                            required=required,
+                        ):
+                            # register all available envs
+                            missing_keyes = []
+                            for env in (params or {}).get("env", {}):
+                                # Those envs are set to use LLM gateway from platform server
+                                if env["name"] in {"LLM_MODEL", "LLM_API_KEY", "LLM_API_BASE"}:
+                                    continue
+                                server_env = envs.get(env.get("name"))
+                                if server_env:
+                                    logger.debug(f"Env variable {env['name']} = '{server_env}' added dynamically")
+                                    os.environ[env["name"]] = server_env
+                                elif env.get("required"):
+                                    missing_keyes.append(env)
+                            if len(missing_keyes) and required:
+                                logger.debug(f"Can not run agent, missing required env variables: {missing_keyes}")
+                                raise Exception("Missing env variables")
+
+        except HTTPStatusError as e:
+            with suppress(Exception):
+                if error_message := e.response.json().get("detail"):
                     logger.debug(f"Agent can not be registered to beeai server: {error_message}")
-                else:
-                    logger.debug(f"Agent can not be registered to beeai server: {e}")
-            except Exception:
-                logger.debug(f"Agent can not be registered to beeai server: {e}")
+                    return
+            logger.debug(f"Agent can not be registered to beeai server: {e}")
+        except HTTPError as e:
+            logger.debug(f"Can not reach server, check if running on {url} : {e}")
+        except Exception as e:
+            logger.debug(f"Agent can not be registered to beeai server: {e}")

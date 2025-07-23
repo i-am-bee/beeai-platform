@@ -3,16 +3,16 @@ from concurrent.futures import ThreadPoolExecutor
 import httpx
 from a2a.server.agent_execution import RequestContextBuilder
 from a2a.server.apps.jsonrpc.fastapi_app import A2AFastAPIApplication
-from a2a.server.events import QueueManager
+from a2a.server.events import InMemoryQueueManager, QueueManager
 from a2a.server.request_handlers import DefaultRequestHandler
-from a2a.server.tasks import PushNotificationConfigStore, PushNotificationSender, TaskStore
+from a2a.server.tasks import PushNotificationConfigStore, PushNotificationSender, TaskStore, InMemoryTaskStore
 from a2a.utils import AGENT_CARD_WELL_KNOWN_PATH, DEFAULT_RPC_URL, EXTENDED_AGENT_CARD_PATH
-from fastapi import Depends, FastAPI
+from fastapi import APIRouter, Depends, FastAPI
 from fastapi.applications import AppType
 from starlette.middleware.cors import CORSMiddleware
 from starlette.types import Lifespan
 
-from beeai_sdk.server.agent import Agent
+from beeai_sdk.server.agent import Agent, Executor
 
 
 def create_app(
@@ -41,10 +41,12 @@ def create_app(
     #                 async with lifespan(app) as state:
     #                     yield state
 
+    queue_manager = queue_manager or InMemoryQueueManager()
+    task_store = task_store or InMemoryTaskStore()
     app = A2AFastAPIApplication(
         agent_card=agent.card,
         http_handler=DefaultRequestHandler(
-            agent_executor=agent.executor,
+            agent_executor=Executor(agent.execute, queue_manager),
             task_store=task_store,
             queue_manager=queue_manager,
             push_config_store=push_config_store,
@@ -55,7 +57,6 @@ def create_app(
         rpc_url=DEFAULT_RPC_URL,
         agent_card_url=AGENT_CARD_WELL_KNOWN_PATH,
         extended_agent_card_url=EXTENDED_AGENT_CARD_PATH,
-        lifespan=lifespan,
         dependencies=dependencies,
         **kwargs,
     )
@@ -68,4 +69,5 @@ def create_app(
         allow_credentials=True,
     )
 
+    app.include_router(APIRouter(lifespan=lifespan))
     return app

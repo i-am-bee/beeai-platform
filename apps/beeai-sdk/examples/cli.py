@@ -15,6 +15,7 @@ import asyncclick
 import asyncclick.exceptions
 import httpx
 import yaml
+from a2a.types import CancelTaskRequest, TaskIdParams
 
 import beeai_sdk.a2a_extensions.services.llm
 
@@ -44,6 +45,8 @@ async def cli(base_url: str, context_id: str, history: bool) -> None:
                     prompt: str = asyncclick.prompt("\n👤 User (CTRL-D to cancel)")
                 except asyncclick.exceptions.Abort:
                     print("Exiting...")
+                    if task_id:
+                        await client.cancel_task(CancelTaskRequest(id=str(uuid.uuid4()), params=TaskIdParams(id=task_id)))
                     return
 
                 message = a2a.types.Message(
@@ -181,41 +184,41 @@ async def cli(base_url: str, context_id: str, history: bool) -> None:
                     except Exception as e:
                         print("Failed to complete the call", e)
 
-                if message_result:
-                    print(f"\n{message_result.model_dump_json(exclude_none=True)}")
-                    break
-
-                if task_result:
-                    task_content = task_result.model_dump_json(
-                        exclude={
-                            "history": {
-                                "__all__": {
-                                    "parts": {
-                                        "__all__": {"file"},
-                                    },
-                                },
-                            },
+    if message:
+        print(f"\n{message.model_dump_json(exclude_none=True)}")
+        return True, context_id, task_id
+    if task_result:
+        # Don't print the contents of a file.
+        task_content = task_result.model_dump_json(
+            exclude={
+                "history": {
+                    "__all__": {
+                        "parts": {
+                            "__all__": {"file"},
                         },
-                        exclude_none=True,
-                    )
-                    print(f"\n{task_content}")
-
-                    state = a2a.types.TaskState(task_result.status.state)
-                    if state.name == a2a.types.TaskState.input_required.name:
-                        continue
-                    else:
-                        break
-
-                break
-
-            if history and task_id:
-                print("========= history ======== ")
-                task_response = await client.get_task(
-                    a2a.types.GetTaskRequest(
-                        id=str(uuid.uuid4()), params=a2a.types.TaskQueryParams(id=task_id, history_length=10)
-                    )
-                )
-                print(task_response.model_dump_json(include={"result": {"history": True}}))
+                    },
+                },
+            },
+            exclude_none=True,
+        )
+        print(f"\n{task_content}")
+        ## if the result is that more input is required, loop again.
+        state = a2a.types.TaskState(task_result.status.state)
+        if state.name == a2a.types.TaskState.input_required.name:
+            return (
+                await complete_task(
+                    client,
+                    streaming,
+                    task_id,
+                    context_id,
+                ),
+                context_id,
+                task_id,
+            )
+        ## task is complete
+        return True, context_id, task_id
+    ## Failure case, shouldn't reach
+    return True, context_id, task_id
 
 
 if __name__ == "__main__":
