@@ -4,12 +4,13 @@
  */
 
 import uniq from 'lodash/uniq';
+import uniqWith from 'lodash/uniqWith';
 
 import type { Provider } from '#modules/providers/api/types.ts';
 import { SupportedUis } from '#modules/runs/constants.ts';
 import { compareStrings, isNotNull } from '#utils/helpers.ts';
 
-import { type AgentExtension, AgentLinkType, type UiExtension, type UIExtensionParams } from './api/types';
+import type { AgentExtension, UiExtension } from './api/types';
 import { type Agent, AGENT_EXTENSION_UI_KEY } from './api/types';
 
 export const getAgentsProgrammingLanguages = (agents: Agent[] | undefined) => {
@@ -21,13 +22,6 @@ export const getAgentsProgrammingLanguages = (agents: Agent[] | undefined) => {
   );
 };
 
-export function getAgentSourceCodeUrl(agent: Agent) {
-  const { links } = agent.ui;
-  const link = links?.find(({ type }) => type === AgentLinkType.SourceCode);
-
-  return link?.url;
-}
-
 export function sortAgentsByName(a: Agent, b: Agent) {
   return compareStrings(a.name, b.name);
 }
@@ -38,20 +32,12 @@ export function isAgentUiSupported(agent: Agent) {
   return ui_type && SupportedUis.includes(ui_type);
 }
 
-export function getAvailableAgentLinkUrl<T extends AgentLinkType | AgentLinkType[]>(
-  links: UIExtensionParams['links'],
-  type: T,
-): string | undefined {
-  const typesArray = Array.isArray(type) ? type : [type];
-
-  for (const type of typesArray) {
-    const url = links?.find((link) => link.type === type)?.url;
-    if (url) {
-      return url;
-    }
-  }
-
-  return undefined;
+export function getAvailableAgentLinkUrl(agent: Agent): string | undefined {
+  const {
+    ui: { homepage_url, source_code_url },
+    documentationUrl,
+  } = agent;
+  return homepage_url || documentationUrl || source_code_url;
 }
 
 function isAgentUiExtension(extension: AgentExtension): extension is UiExtension {
@@ -61,14 +47,18 @@ function isAgentUiExtension(extension: AgentExtension): extension is UiExtension
 export function buildAgent(provider: Provider): Agent {
   const { agent_card, ...providerData } = provider;
 
-  const ui = agent_card.capabilities.extensions?.find(isAgentUiExtension)?.params ?? null;
+  const ui = agent_card.capabilities.extensions?.find(isAgentUiExtension)?.params ?? {};
 
   return {
     ...agent_card,
     provider: { ...providerData, metadata: agent_card.provider },
-    ui: {
-      ...ui,
-      display_name: ui?.display_name ?? agent_card.name,
-    },
+    ui,
   };
+}
+
+export function getAgentTags(agent: Agent) {
+  return uniqWith(
+    agent.skills.flatMap(({ tags }) => tags),
+    (a, b) => a.toLocaleLowerCase() === b.toLocaleLowerCase(),
+  );
 }
