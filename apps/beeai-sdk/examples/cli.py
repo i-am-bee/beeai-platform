@@ -46,7 +46,9 @@ async def cli(base_url: str, context_id: str, history: bool) -> None:
                 except asyncclick.exceptions.Abort:
                     print("Exiting...")
                     if task_id:
-                        await client.cancel_task(CancelTaskRequest(id=str(uuid.uuid4()), params=TaskIdParams(id=task_id)))
+                        await client.cancel_task(
+                            CancelTaskRequest(id=str(uuid.uuid4()), params=TaskIdParams(id=task_id))
+                        )
                     return
 
                 message = a2a.types.Message(

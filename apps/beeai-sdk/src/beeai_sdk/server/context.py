@@ -8,7 +8,7 @@ from beeai_sdk.server.types import RunYield, RunYieldResume
 
 
 class Context(BaseModel, arbitrary_types_allowed=True):
-    configuration: MessageSendConfiguration
+    configuration: MessageSendConfiguration | None = None
     task_updater: TaskUpdater
     task_id: str
     context_id: str

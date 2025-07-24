@@ -14,6 +14,7 @@ from a2a.types import (
     AgentCard,
     AgentInterface,
     AgentSkill,
+    Artifact,
     Message,
     Part,
     TaskState,
@@ -23,7 +24,7 @@ from a2a.types import (
 )
 
 from beeai_sdk.server.context import Context
-from beeai_sdk.server.types import RunYield, RunYieldResume
+from beeai_sdk.server.types import ArtifactChunk, RunYield, RunYieldResume
 from beeai_sdk.server.utils import cancel_task
 
 AgentFunction: TypeAlias = Callable[[TaskUpdater, RequestContext], AsyncGenerator[RunYield, RunYieldResume]]
@@ -199,7 +200,7 @@ class Executor(AgentExecutor):
             cancel_queue.task_done()
             task.cancel()
         finally:
-            await cancel_queue.close()
+            await self._queue_manager.close(f"_cancel_{task_id}")
             self._cancel_queues.pop(task_id)
 
     async def _run_generator(
@@ -216,6 +217,7 @@ class Executor(AgentExecutor):
         try:
             await task_updater.start_work()
             value = None
+            opened_artifacts: set[str] = set()
             while True:
                 yielded_value = await gen.asend(value)
                 match yielded_value:
@@ -233,18 +235,43 @@ class Executor(AgentExecutor):
                         if context_id != task_updater.context_id or task_id != task_updater.task_id:
                             raise ValueError("Message must have the same context_id and task_id as the task")
                         await task_updater.update_status(TaskState.working, message=yielded_value)
+                    case ArtifactChunk(
+                        parts=parts, artifact_id=artifact_id, name=name, metadata=metadata, last_chunk=last_chunk
+                    ):
+                        await task_updater.add_artifact(
+                            parts=parts,
+                            artifact_id=artifact_id,
+                            name=name,
+                            metadata=metadata,
+                            append=artifact_id in opened_artifacts,
+                            last_chunk=last_chunk,
+                        )
+                        opened_artifacts.add(artifact_id)
+                    case Artifact(parts=parts, artifact_id=artifact_id, name=name, metadata=metadata):
+                        await task_updater.add_artifact(
+                            parts=parts,
+                            artifact_id=artifact_id,
+                            name=name,
+                            metadata=metadata,
+                            last_chunk=True,
+                            append=False,
+                        )
                     case TaskStatus(state=TaskState.input_required, message=message, timestamp=timestamp):
-                        await task_updater.requires_input(message=message)
+                        await task_updater.requires_input(message=message, final=True)
                         value = await resume_queue.dequeue_event()
                         resume_queue.task_done()
                         continue
                     case TaskStatus(state=TaskState.auth_required, message=message, timestamp=timestamp):
-                        await task_updater.requires_auth(message=message)
+                        await task_updater.requires_auth(message=message, final=True)
                         value = await resume_queue.dequeue_event()
                         resume_queue.task_done()
                         continue
                     case TaskStatus(state=state, message=message, timestamp=timestamp):
                         await task_updater.update_status(state=state, message=message, timestamp=timestamp)
+                    case Exception() as ex:
+                        raise ex
+                    case _:
+                        raise ValueError(f"Invalid value yielded from agent: {type(yielded_value)}")
                 value = None
         except StopAsyncIteration:
             await task_updater.complete()
@@ -253,38 +280,35 @@ class Executor(AgentExecutor):
         except Exception as ex:
             await task_updater.failed(task_updater.new_agent_message(parts=[Part(root=TextPart(text=str(ex)))]))
         finally:
+            await self._queue_manager.close(f"_event_{task_updater.task_id}")
+            await self._queue_manager.close(f"_resume_{task_updater.task_id}")
             await cancel_task(cancellation_task)
 
     async def _forward_messages(self, forwarding_started: Event, source_queue: EventQueue, target_queue: EventQueue):
-        forwarding_started.set()
         with suppress(CancelledError):
             while True:
-                await target_queue.enqueue_event(await source_queue.dequeue_event())
+                event = await source_queue.dequeue_event()
                 source_queue.task_done()
+                await target_queue.enqueue_event(event)
 
     async def execute(self, context: RequestContext, event_queue: EventQueue) -> None:
-        fwd_task = None
         try:
-            if context.current_task and context.current_task.status == TaskState.working:
+            current_status = context.current_task and context.current_task.status.state
+            if current_status == TaskState.working:
                 raise RuntimeError("Cannot resume working task")
+            if not context.task_id:
+                raise RuntimeError("Task ID was not created")
 
-            resume_queue = await self._queue_manager.get(task_id=f"_resume_{context.task_id}")
-            if not resume_queue:
+            if not (resume_queue := await self._queue_manager.get(task_id=f"_resume_{context.task_id}")):
                 resume_queue = await self._queue_manager.create_or_tap(task_id=f"_resume_{context.task_id}")
 
-            long_running_event_queue = await self._queue_manager.create_or_tap(task_id=f"_event_{context.task_id}")
+            if not (long_running_event_queue := await self._queue_manager.get(task_id=f"_event_{context.task_id}")):
+                long_running_event_queue = await self._queue_manager.create_or_tap(task_id=f"_event_{context.task_id}")
 
-            fwd_started = Event()
-            fwd_task = asyncio.create_task(self._forward_messages(fwd_started, long_running_event_queue, event_queue))
-            await fwd_started.wait()
-
-            task_updater = TaskUpdater(long_running_event_queue, task_id=context.task_id, context_id=context.context_id)
-            if context.current_task and context.current_task.status.state in {
-                TaskState.input_required,
-                TaskState.auth_required,
-            }:
+            if current_status in {TaskState.input_required, TaskState.auth_required}:
                 await resume_queue.enqueue_event(context.message)
             else:
+                task_updater = TaskUpdater(long_running_event_queue, context.task_id, context.context_id)
                 generator = self._execute_fn(task_updater, context)
                 run_generator = self._run_generator(gen=generator, task_updater=task_updater, resume_queue=resume_queue)
                 self._running_tasks[context.task_id] = asyncio.create_task(run_generator)
@@ -292,25 +316,26 @@ class Executor(AgentExecutor):
                     lambda _: self._running_tasks.pop(context.task_id)
                 )
 
-            # Block until asynchronous processing is finished
-            _exit_queue = long_running_event_queue.tap()
-
             while True:
-                event = await _exit_queue.dequeue_event()
-                _exit_queue.task_done()
+                # Forward messages to local event queue
+                event = await long_running_event_queue.dequeue_event()
+                long_running_event_queue.task_done()
+                await event_queue.enqueue_event(event)
                 match event:
                     case TaskStatusUpdateEvent(
-                        status=TaskStatus(state=TaskState.completed | TaskState.failed | TaskState.canceled)
+                        status=TaskStatus(
+                            state=TaskState.completed
+                            | TaskState.failed
+                            | TaskState.canceled
+                            | TaskState.auth_required
+                            | TaskState.input_required
+                        )
                     ):
-                        await resume_queue.close()
-                        await long_running_event_queue.close()
                         break
-                    case TaskStatusUpdateEvent(
-                        status=TaskStatus(state=TaskState.auth_required | TaskState.input_required)
-                    ):
-                        break
-        finally:
-            await cancel_task(fwd_task)
+        except Exception as ex:
+            print(ex)
+        except CancelledError:
+            await TaskUpdater(event_queue, task_id=context.task_id, context_id=context.context_id).cancel()
 
     async def cancel(self, context: RequestContext, event_queue: EventQueue) -> None:
         try:
