@@ -132,7 +132,7 @@ wheels = [
 
 [[package]]
 name = "beeai-framework"
-version = "0.1.29"
+version = "0.1.31"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiofiles" },
@@ -145,14 +145,14 @@ dependencies = [
     { name = "pydantic-settings" },
     { name = "requests" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/1e/9e/6bcac07b0f240100d6c05db0f95c9539bb0cd221fe9d9187f339b954cecf/beeai_framework-0.1.29.tar.gz", hash = "sha256:36604e6287e309eb4b99e17ddb5bc160f532844fb64af7bd5bfa2c43ad3635c2", size = 119982, upload-time = "2025-07-02T13:18:05.301Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/a8/2e/961fc3fc90294f1aa76ee28f84aee50a865b503822949baf454946ee9fe6/beeai_framework-0.1.31.tar.gz", hash = "sha256:20a912549715546a0fba4711916db8d2b0d0ae6420283f9f64b6ba1e380cb131", size = 118937, upload-time = "2025-07-18T17:19:58.673Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ad/7b/c8e60c4412ccb519441e91e0f53625c13e7072eb67a2432d08bd0ebf87bc/beeai_framework-0.1.29-py3-none-any.whl", hash = "sha256:ae07b62f36be6783e6b1cdb72f78f8acaae038a08b89a16cc777527a152529d9", size = 271857, upload-time = "2025-07-02T13:18:03.794Z" },
+    { url = "https://files.pythonhosted.org/packages/eb/d5/a73e0882425e89194bb93104f93301cf8b23eef18ad8d81ecb453f70ff6a/beeai_framework-0.1.31-py3-none-any.whl", hash = "sha256:10cb7d2be9ffe4c0f1487625ac82c6a15673e9d3ce02c2bc7910c2249d7f7df2", size = 218659, upload-time = "2025-07-18T17:19:57.429Z" },
 ]
 
 [package.optional-dependencies]
 duckduckgo = [
-    { name = "duckduckgo-search" },
+    { name = "ddgs" },
 ]
 wikipedia = [
     { name = "wikipedia-api" },
@@ -212,7 +212,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "acp-sdk", specifier = "==1.0.0" },
-    { name = "beeai-framework", extras = ["duckduckgo", "wikipedia"], specifier = "~=0.1.29" },
+    { name = "beeai-framework", extras = ["duckduckgo", "wikipedia"], specifier = "~=0.1.31" },
     { name = "openinference-instrumentation-beeai", specifier = ">=0.1.6" },
     { name = "pydantic-settings", specifier = ">=2.9.0" },
 ]
@@ -248,6 +248,20 @@ wheels = [
 ]
 
 [[package]]
+name = "ddgs"
+version = "9.4.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "click" },
+    { name = "lxml" },
+    { name = "primp" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/e7/c1/26e3308381d517bc0693d0a8b38e11c7f3d1546eeb326aec8c4527e0cf03/ddgs-9.4.0.tar.gz", hash = "sha256:5a607983b44357705ca53a031bca95fb35c193c85a2de3074255b189d58293c7", size = 30008, upload-time = "2025-07-20T13:27:15.314Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e8/83/b2ef3e7600e180edf82d8c47fe096a77a38538ac46e1689372848553bebf/ddgs-9.4.0-py3-none-any.whl", hash = "sha256:2e0a93108df9b5883f9ca022984c1cb7e8da9a2772e92803f0e1da9724de081d", size = 34348, upload-time = "2025-07-20T13:27:14.073Z" },
+]
+
+[[package]]
 name = "deprecated"
 version = "1.2.18"
 source = { registry = "https://pypi.org/simple" }
@@ -275,20 +289,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/b5/4a/263763cb2ba3816dd94b08ad3a33d5fdae34ecb856678773cc40a3605829/dnspython-2.7.0.tar.gz", hash = "sha256:ce9c432eda0dc91cf618a5cedf1a4e142651196bbcd2c80e89ed5a907e5cfaf1", size = 345197, upload-time = "2024-10-05T20:14:59.362Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/68/1b/e0a87d256e40e8c888847551b20a017a6b98139178505dc7ffb96f04e954/dnspython-2.7.0-py3-none-any.whl", hash = "sha256:b4c34b7d10b51bcc3a5071e7b8dee77939f1e878477eeecc965e9835f63c6c86", size = 313632, upload-time = "2024-10-05T20:14:57.687Z" },
-]
-
-[[package]]
-name = "duckduckgo-search"
-version = "8.0.5"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "click" },
-    { name = "lxml" },
-    { name = "primp" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/46/2e/680bedb6c66f7de544eb92f8a369406c2671d9907a4ee51f79cffa7b6433/duckduckgo_search-8.0.5.tar.gz", hash = "sha256:a46f83a92d4666b823ac45abce1495573ec58d984c8d6d19368f850758c95456", size = 22101, upload-time = "2025-07-01T20:31:02.592Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/6a/28/bd84c58623bc7a817b30ae8ba23356f8cfca8577969c15c7133ac29db1e4/duckduckgo_search-8.0.5-py3-none-any.whl", hash = "sha256:c9f18cb8f8311b9005c8f8f699216dd124b01a797d97a2df725942c1af4c16fa", size = 18228, upload-time = "2025-07-01T20:31:01.462Z" },
 ]
 
 [[package]]
