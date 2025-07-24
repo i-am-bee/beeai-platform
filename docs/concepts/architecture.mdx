@@ -3,7 +3,29 @@ title: "Architecture"
 description: "An overview of BeeAI core concepts and architecture"
 ---
 
-BeeAI is designed for a **local-first** experience - agents run directly on your laptop, giving you full control over your data and seamless integration with local inference engines like [ollama](https://ollama.com).
+BeeAI is designed with a local-first philosophy - you can start immediately by running agents directly on your laptop with full data control. When you're ready to scale, the same platform can be easily deployed as a hosted instance for your team.
+
+## Deployment Options
+
+### Local Development (Default)
+
+Perfect for individual developers and experimentation:
+- **Zero setup** - runs entirely on your laptop
+- **Full data control** - everything stays local
+- **Offline capable** - works without internet after initial setup
+- **LLM flexibility** - connect to local providers like Ollama or cloud APIs
+
+### Hosted Team Instance
+
+Scale to team collaboration with the same platform:
+- **Centralized deployment** - one instance serves your entire team
+- **Shared agent catalog** - developers publish, end users discover
+- **Unified management** - control LLM connections, costs, and access
+- **Team coordination** - consistent interfaces and shared resources
+
+Both options use the exact same architecture - the only difference is where the BeeAI Server runs.
+
+## Core Components
 
 The platform is built around several core components, illustrated in the diagram below:
 
@@ -16,8 +38,6 @@ The platform is built around several core components, illustrated in the diagram
     src="/images/architecture-dark.svg"
 />
 
-## Core Components
-
 ### Agents
 
 An **agent** is a lightweight container that communicates using the [Agent Communication Protocol (ACP)](https://agentcommunicationprotocol.dev). Agents may also define **tools** to extend their capabilities.
@@ -28,10 +48,6 @@ An **agent** is a lightweight container that communicates using the [Agent Commu
 
 ### BeeAI Server
 
-<Info>
-    Dive into the [beeai-server source code](https://github.com/i-am-bee/beeai-platform/tree/main/apps/beeai-server).
-</Info>
-
 The **BeeAI server** coordinates the platform:
 - Manages the lifecycle of agents (spawning and destroying containers)
 - Routes communication between agents and clients via the ACP interface
@@ -40,13 +56,11 @@ The **BeeAI server** coordinates the platform:
 
 The server uses an official [agent registry](https://github.com/i-am-bee/beeai-platform/blob/main/agent-registry.yaml) on GitHub to discover available agents.
 
-### BeeAI CLI and UI
-
 <Info>
-    Check out the
-    [beeai-cli](https://github.com/i-am-bee/beeai-platform/tree/main/apps/beeai-cli) and
-    [beeai-ui](https://github.com/i-am-bee/beeai-platform/tree/main/apps/beeai-ui) repositories.
+    Dive into the [beeai-server source code](https://github.com/i-am-bee/beeai-platform/tree/main/apps/beeai-server).
 </Info>
+
+### BeeAI CLI and UI
 
 BeeAI offers two main interfaces:
 - The CLI, for scripting and command-line control
@@ -55,6 +69,12 @@ BeeAI offers two main interfaces:
 To start interacting with an agent: `beeai run <name>`
 
 Or open the web interface at [localhost:8333](http://localhost:8333).
+
+<Info>
+    Check out the
+    [beeai-cli](https://github.com/i-am-bee/beeai-platform/tree/main/apps/beeai-cli) and
+    [beeai-ui](https://github.com/i-am-bee/beeai-platform/tree/main/apps/beeai-ui) repositories.
+</Info>
 
 ## Python Client Integration
 
