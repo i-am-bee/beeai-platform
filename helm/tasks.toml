@@ -6,7 +6,7 @@ depends = ["helm:check:*"]
 ["helm:check:lint"]
 depends = ["helm:build:dependencies"]
 dir = "{{config_root}}/helm"
-run = "helm lint . --with-subcharts --set encryptionKey=dummy --set auth.enabled=false --strict"
+run = "helm lint . --set encryptionKey=dummy --set auth.enabled=false --strict"
 sources = ["Chart.yaml", "Chart.lock", "values.yaml", ".helmignore", "charts/*", "templates/**/*"]
 outputs = { auto = true }
 

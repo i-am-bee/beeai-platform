@@ -4,12 +4,15 @@ dependencies:
   version: 2.31.3
 - name: postgresql
   repository: oci://registry-1.docker.io/bitnamicharts
-  version: 16.7.18
+  version: 16.7.20
 - name: seaweedfs
   repository: https://seaweedfs.github.io/seaweedfs/helm
   version: 4.0.393
 - name: phoenix-helm
   repository: oci://registry-1.docker.io/arizephoenix
-  version: 2.0.11
-digest: sha256:7de8af83f584265cddb1bbef3ed03d70e3a52b508745b3ebc1007bc0eb77f911
-generated: "2025-07-15T14:31:35.503506+02:00"
+  version: 2.0.12
+- name: mcp-stack
+  repository: oci://docker.io/tomaspilar
+  version: 0.3.0
+digest: sha256:6df64d00954aed3bd25540c93f0dae338bb16dd8cb74169a58415d4186cfb021
+generated: "2025-07-21T08:16:24.167854+02:00"
