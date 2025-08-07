@@ -3,6 +3,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { match } from 'ts-pattern';
+
+import { transformFilePart } from '#modules/files/utils.ts';
+import { transformSourcePart } from '#modules/sources/utils.ts';
+
 import { Role } from './api/types';
 import type { UIAgentMessage, UIMessage, UIMessagePart, UISourcePart, UITransformPart, UIUserMessage } from './types';
 import { UIMessagePartKind, UIMessageStatus, UITransformType } from './types';
@@ -140,4 +145,29 @@ export function sortMessageParts(parts: UIMessagePart[]): UIMessagePart[] {
 
   // Transforms must be at the end
   return [...otherParts, ...sortedSourceParts, ...sortedTransformParts];
+}
+
+export function addTranformedMessagePart(part: UIMessagePart, message: UIAgentMessage) {
+  const newParts = [...message.parts];
+
+  match(part)
+    .with({ kind: UIMessagePartKind.File }, (part) => {
+      const transformedPart = transformFilePart(part, message);
+
+      if (transformedPart) {
+        newParts.push(transformedPart);
+      } else {
+        newParts.push(part);
+      }
+    })
+    .with({ kind: UIMessagePartKind.Source }, (part) => {
+      const transformedPart = transformSourcePart(part);
+
+      newParts.push(part, transformedPart);
+    })
+    .otherwise((part) => {
+      newParts.push(part);
+    });
+
+  return sortMessageParts(newParts);
 }
