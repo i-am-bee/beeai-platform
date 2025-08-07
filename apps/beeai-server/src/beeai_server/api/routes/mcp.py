@@ -4,7 +4,14 @@
 import fastapi
 
 from beeai_server.api.dependencies import AdminUserDependency, AuthenticatedUserDependency, McpServiceDependency
-from beeai_server.api.schema.mcp import CreateMcpProviderRequest, CreateToolkitRequest, McpProvider, Tool, Toolkit
+from beeai_server.api.schema.mcp import (
+    CreateMcpProviderRequest,
+    CreateToolkitRequest,
+    McpProvider,
+    Resource,
+    Tool,
+    Toolkit,
+)
 from beeai_server.api.utils import to_fastapi
 
 router = fastapi.APIRouter()
@@ -37,6 +44,18 @@ async def read_provider(provider_id: str, mcp_service: McpServiceDependency, _: 
 @router.delete("/providers/{provider_id}", status_code=fastapi.status.HTTP_204_NO_CONTENT)
 async def delete_provider(provider_id: str, mcp_service: McpServiceDependency, _: AdminUserDependency):
     await mcp_service.delete_provider(provider_id=provider_id)
+
+
+@router.get("/resources", response_model=list[Resource])
+async def list_resources(mcp_service: McpServiceDependency, user: AuthenticatedUserDependency):
+    resources = await mcp_service.list_resources()
+    return resources
+
+
+@router.get("/resources/{resource_id}", response_model=Resource)
+async def read_resource(resource_id: str, mcp_service: McpServiceDependency, user: AuthenticatedUserDependency):
+    resource = await mcp_service.read_resource(resource_id=resource_id)
+    return resource
 
 
 @router.get("/tools", response_model=list[Tool])

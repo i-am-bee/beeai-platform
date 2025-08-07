@@ -90,6 +90,31 @@ async def list_tools() -> None:
     console.print(table)
 
 
+resources_app = AsyncTyper()
+app.add_typer(resources_app, name="resource", no_args_is_help=True, help="Inspect resources.")
+
+
+@resources_app.command("list")
+async def list_resources() -> None:
+    """List resources."""
+
+    resources = await api_request("GET", "mcp/resources")
+    with create_table(
+        Column("Name"),
+        Column("Description"),
+        Column("Type"),
+        Column("Size"),
+        Column("URI"),
+        no_wrap=True,
+    ) as table:
+        for resource in resources:
+            table.add_row(
+                resource["name"], resource["description"], resource["type"], resource["size"], resource["uri"]
+            )
+    console.print()
+    console.print(table)
+
+
 toolkit_app = AsyncTyper()
 app.add_typer(toolkit_app, name="toolkit", no_args_is_help=True, help="Create toolkits.")
 
