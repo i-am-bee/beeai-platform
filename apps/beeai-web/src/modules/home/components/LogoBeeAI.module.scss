@@ -5,15 +5,14 @@
 
 .container {
   position: relative;
-  block-size: rem(72px);
+  block-size: rem(68px);
 }
 
 .placeholder,
 .animation {
   position: absolute;
-  block-size: rem(209px);
-  margin-inline-start: rem(-27px);
-  margin-block-start: rem(-68px);
+  block-size: rem(68px);
+  margin-inline-start: rem(-4px);
   path {
     fill: currentColor;
   }

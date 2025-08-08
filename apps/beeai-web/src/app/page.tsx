@@ -3,17 +3,19 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { GettingStarted } from '@i-am-bee/beeai-ui';
-
 import { MainContent } from '@/layouts/MainContent';
-import { ExperienceShowcase } from '@/modules/home/ExperienceShowcase';
+import { Framework } from '@/modules/home/Framework';
+import { Highlights } from '@/modules/home/Highlights';
+import { Introduction } from '@/modules/home/Introduction';
+import { Platform } from '@/modules/home/Platform';
 
 export default function Home() {
   return (
     <MainContent>
-      <GettingStarted />
-
-      <ExperienceShowcase />
+      <Introduction />
+      <Highlights />
+      <Framework />
+      <Platform />
     </MainContent>
   );
 }

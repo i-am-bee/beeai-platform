@@ -6,8 +6,7 @@
 import clsx from 'clsx';
 import { lazy, useState } from 'react';
 
-import Logo from '#svgs/LogoBeeAI.svg';
-
+import Logo from '../assets/LogoBeeAI.svg';
 import animationData from './LogoBeeAI.json';
 import classes from './LogoBeeAI.module.scss';
 
