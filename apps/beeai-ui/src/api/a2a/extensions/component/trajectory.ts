@@ -5,7 +5,7 @@
 
 import { z } from 'zod';
 
-import type { A2AExtension } from './types';
+import type { A2AComponentExtension } from '../types';
 
 const URI = 'https://a2a-extensions.beeai.dev/ui/trajectory/v1';
 
@@ -18,7 +18,7 @@ const schema = z
 
 export type TrajectoryMetadata = z.infer<typeof schema>;
 
-export const trajectoryExtension: A2AExtension<typeof URI, TrajectoryMetadata> = {
-  getSchema: () => z.object({ [URI]: schema }).partial(),
+export const trajectoryExtension: A2AComponentExtension<typeof URI, TrajectoryMetadata> = {
+  getMessageSchema: () => z.object({ [URI]: schema }).partial(),
   getUri: () => URI,
 };

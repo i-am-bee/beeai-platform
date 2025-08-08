@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import type { TaskArtifactUpdateEvent, TaskStatusUpdateEvent } from '@a2a-js/sdk';
+import type { AgentExtension, TaskArtifactUpdateEvent, TaskStatusUpdateEvent } from '@a2a-js/sdk';
 import { A2AClient } from '@a2a-js/sdk/client';
 import { Subject } from 'rxjs';
 import { match } from 'ts-pattern';
@@ -13,9 +13,15 @@ import type { ContextId, TaskId } from '#modules/tasks/api/types.ts';
 import { getBaseUrl } from '#utils/api/getBaseUrl.ts';
 
 import { AGENT_ERROR_MESSAGE } from './constants';
+import type { MCPDemand, MCPFullfilment } from './extensions/service/mcp';
+import { mcpExtension } from './extensions/service/mcp';
+import { extractServiceExtensionDemands, fullfilServiceExtensionDemand } from './extensions/utils';
 import { processMessageMetadata, processParts } from './part-processors';
 import type { ChatRun } from './types';
 import { createUserMessage, extractTextFromMessage } from './utils';
+
+const mcpExtensionExtractor = extractServiceExtensionDemands(mcpExtension);
+const fullFillMcpDemand = fullfilServiceExtensionDemand(mcpExtension);
 
 function handleStatusUpdate(event: TaskStatusUpdateEvent): UIMessagePart[] {
   const { message, state } = event.status;
@@ -44,16 +50,36 @@ function handleArtifactUpdate(event: TaskArtifactUpdateEvent): UIMessagePart[] {
   return contentParts;
 }
 
-export const buildA2AClient = (providerId: string) => {
+type Fullfilments = {
+  mcp: (demand: MCPDemand) => Promise<MCPFullfilment>;
+};
+
+export const buildA2AClient = (providerId: string, extensions: AgentExtension[]) => {
+  const mcpDemands = mcpExtensionExtractor(extensions);
+
   const agentUrl = `${getBaseUrl()}/api/v1/a2a/${providerId}`;
   const client = new A2AClient(agentUrl);
 
-  const chat = ({ message, contextId }: { message: UIUserMessage; contextId: ContextId }) => {
+  const chat = ({
+    message,
+    contextId,
+    fullfilments,
+  }: {
+    message: UIUserMessage;
+    contextId: ContextId;
+    fullfilments: Fullfilments;
+  }) => {
     const messageSubject = new Subject<{ parts: UIMessagePart[]; taskId: TaskId }>();
     let taskId: string | null = null;
 
     const iterateOverStream = async () => {
-      const stream = client.sendMessageStream({ message: createUserMessage({ message, contextId }) });
+      let metadata = {};
+
+      if (mcpDemands) {
+        metadata = fullFillMcpDemand(metadata, await fullfilments.mcp(mcpDemands));
+      }
+
+      const stream = client.sendMessageStream({ message: createUserMessage({ message, contextId, metadata }) });
 
       for await (const event of stream) {
         match(event)

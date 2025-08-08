@@ -5,7 +5,16 @@
 
 import type { z } from 'zod';
 
-export interface A2AExtension<U extends string, D> {
-  getSchema: () => z.ZodSchema<Partial<Record<U, D>>>;
+export interface A2AExtension<U extends string> {
   getUri: () => U;
+}
+
+export interface A2AComponentExtension<U extends string, D> extends A2AExtension<U> {
+  getMessageSchema: () => z.ZodSchema<Partial<Record<U, D>>>;
+}
+
+export interface A2AServiceExtension<U extends string, D, F> extends A2AExtension<U> {
+  getUri: () => U;
+  getDemandsSchema: () => z.ZodSchema<D>;
+  getFullfilmentSchema: () => z.ZodSchema<F>;
 }
