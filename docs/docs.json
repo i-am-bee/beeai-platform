@@ -19,6 +19,19 @@
         ]
       },
       {
+        "group": "Build Your Own Agent",
+        "pages": [
+          "/build-agents/hello-world",
+          "/build-agents/agent-details",
+          "/build-agents/messages",
+          "/build-agents/extensions",
+          "/build-agents/files",
+          "/build-agents/gui-components",
+          "/build-agents/mcp",
+          "/build-agents/rag"
+        ]
+      },
+      {
         "group": "How To",
         "pages": [
           "/how-to/discover-agents",
@@ -26,27 +39,26 @@
           "/how-to/run-agents",
           "/how-to/observe-agents",
           "/how-to/import-agents",
-          "/how-to/build-agents",
+
           "/how-to/share-agents",
           "/how-to/cli-reference",
           "/how-to/web-interface"
         ]
       },
       {
-        "group": "Core Concepts",
-        "pages": ["concepts/architecture",
-                  "concepts/acp-protocol",
-                  "concepts/gui-components"]
-      },
-      {
         "group": "Deployment",
-        "pages": ["deployment/overview",
-                  "deployment/kubernetes"]
+        "pages": [
+          "concepts/architecture",
+          "deployment/overview",
+          "deployment/kubernetes"
+        ]
       },
       {
         "group": "Community and Support",
-        "pages": ["community-and-support/troubleshooting",
-                  "community-and-support/contribute"]
+        "pages": [
+          "community-and-support/troubleshooting",
+          "community-and-support/contribute"
+        ]
       }
     ]
   },
