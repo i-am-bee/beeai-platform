@@ -138,11 +138,12 @@ async def sequential_workflow(steps_message: Message) -> AsyncIterator:
                 agent_name = agent_card.name
 
                 yield {
+                  "beeai-sequential-workflow" : {
                     "agent_name": agent_name,
                     "provider_id": step.provider_id,
                     "agent_idx": idx,
                     "message": f"✅ Agent {agent_name}[{idx}] started processing",
-                }
+                }}
 
                 message = Message(
                     role=Role.user,
@@ -182,7 +183,6 @@ async def sequential_workflow(steps_message: Message) -> AsyncIterator:
                     "agent_idx": idx,
                     "message": f"✅ Agent {agent_name}[{idx}] finished successfully",
                 }
-        yield previous_output
     except Exception as e:
         step_msg = f"{agent_name}[{idx}] - " if current_step else ""
         raise RuntimeError(f"{step_msg}{extract_messages(e)}")

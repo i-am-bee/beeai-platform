@@ -17,7 +17,10 @@ import { processMessageMetadata, processParts } from './part-processors';
 import type { ChatRun } from './types';
 import { createUserMessage, extractTextFromMessage } from './utils';
 
-function handleStatusUpdate(event: TaskStatusUpdateEvent): UIMessagePart[] {
+function handleStatusUpdate<UIGenericPart = never>(
+  event: TaskStatusUpdateEvent,
+  onStatusUpdate?: (event: TaskStatusUpdateEvent) => UIGenericPart[],
+): (UIMessagePart | UIGenericPart)[] {
   const { message, state } = event.status;
 
   if (state === 'failed' || state === 'rejected') {
@@ -33,7 +36,9 @@ function handleStatusUpdate(event: TaskStatusUpdateEvent): UIMessagePart[] {
   const metadataParts = processMessageMetadata(message);
   const contentParts = processParts(message.parts);
 
-  return [...metadataParts, ...contentParts];
+  const genericParts = onStatusUpdate?.(event) || [];
+
+  return [...metadataParts, ...contentParts, ...genericParts];
 }
 
 function handleArtifactUpdate(event: TaskArtifactUpdateEvent): UIMessagePart[] {
@@ -44,12 +49,20 @@ function handleArtifactUpdate(event: TaskArtifactUpdateEvent): UIMessagePart[] {
   return contentParts;
 }
 
-export const buildA2AClient = (providerId: string) => {
+interface CreateA2AClientParams<UIGenericPart = never> {
+  providerId: string;
+  onStatusUpdate?: (event: TaskStatusUpdateEvent) => UIGenericPart[];
+}
+
+export const buildA2AClient = <UIGenericPart = never>({
+  providerId,
+  onStatusUpdate,
+}: CreateA2AClientParams<UIGenericPart>) => {
   const agentUrl = `${getBaseUrl()}/api/v1/a2a/${providerId}`;
   const client = new A2AClient(agentUrl);
 
   const chat = ({ message, contextId }: { message: UIUserMessage; contextId: ContextId }) => {
-    const messageSubject = new Subject<{ parts: UIMessagePart[]; taskId: TaskId }>();
+    const messageSubject = new Subject<{ parts: (UIMessagePart | UIGenericPart)[]; taskId: TaskId }>();
     let taskId: string | null = null;
 
     const iterateOverStream = async () => {
@@ -63,7 +76,7 @@ export const buildA2AClient = (providerId: string) => {
           .with({ kind: 'status-update' }, (event) => {
             taskId = event.taskId;
 
-            const parts = handleStatusUpdate(event);
+            const parts: (UIMessagePart | UIGenericPart)[] = handleStatusUpdate(event, onStatusUpdate);
 
             messageSubject.next({ parts, taskId });
           })
@@ -78,7 +91,7 @@ export const buildA2AClient = (providerId: string) => {
       messageSubject.complete();
     };
 
-    const run: ChatRun = {
+    const run: ChatRun<UIGenericPart> = {
       done: iterateOverStream(),
       subscribe: (fn) => {
         const subscription = messageSubject.subscribe(fn);

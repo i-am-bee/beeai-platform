@@ -3,22 +3,30 @@
 
 import asyncio
 import uuid
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, AsyncIterator
 
 import pytest
 from a2a.client import A2AClient, create_text_message_object
 from a2a.types import (
+    Artifact,
+    DataPart,
+    FilePart,
+    FileWithBytes,
     Message,
     MessageSendParams,
+    Role,
     SendMessageRequest,
     SendStreamingMessageRequest,
+    TaskArtifactUpdateEvent,
     TaskState,
     TaskStatus,
     TaskStatusUpdateEvent,
+    TextPart,
 )
 
+from beeai_sdk.a2a.types import RunYield
 from beeai_sdk.server import Server
-from beeai_sdk.server.context import Context
+from beeai_sdk.server.context import RunContext
 
 
 def create_send_request_object(text: str | None = None, task_id: str | None = None):
@@ -53,7 +61,7 @@ async def sync_function_agent(create_server_with_agent) -> AsyncGenerator[tuple[
 
 @pytest.fixture
 async def sync_function_with_context_agent(create_server_with_agent) -> AsyncGenerator[tuple[Server, A2AClient]]:
-    def sync_function_with_context_agent(message: Message, context: Context):
+    def sync_function_with_context_agent(message: Message, context: RunContext):
         """Synchronous function agent with context that uses context.yield_sync."""
         context.yield_sync("first sync yield")
         return f"sync_function_with_context_agent: {message.parts[0].root.text}"
@@ -75,7 +83,7 @@ async def sync_generator_agent(create_server_with_agent) -> AsyncGenerator[tuple
 
 @pytest.fixture
 async def sync_generator_with_context_agent(create_server_with_agent) -> AsyncGenerator[tuple[Server, A2AClient]]:
-    def sync_generator_with_context_agent(message: Message, context: Context):
+    def sync_generator_with_context_agent(message: Message, context: RunContext):
         """Synchronous generator agent with context using both yields and context.yield_sync."""
         yield "sync_generator_with_context yield 1"
         context.yield_sync("sync_generator_with_context context yield")
@@ -99,7 +107,7 @@ async def async_function_agent(create_server_with_agent) -> AsyncGenerator[tuple
 
 @pytest.fixture
 async def async_function_with_context_agent(create_server_with_agent) -> AsyncGenerator[tuple[Server, A2AClient]]:
-    async def async_function_with_context_agent(message: Message, context: Context):
+    async def async_function_with_context_agent(message: Message, context: RunContext):
         """Asynchronous function agent with context that uses context.yield_async."""
         await context.yield_async("first async yield")
         await asyncio.sleep(0.01)
@@ -124,7 +132,7 @@ async def async_generator_agent(create_server_with_agent) -> AsyncGenerator[tupl
 
 @pytest.fixture
 async def async_generator_with_context_agent(create_server_with_agent) -> AsyncGenerator[tuple[Server, A2AClient]]:
-    async def async_generator_with_context_agent(message: Message, context: Context):
+    async def async_generator_with_context_agent(message: Message, context: RunContext):
         """Asynchronous generator agent with context using both yields and context.yield_async."""
         yield "async_generator_with_context yield 1"
         await context.yield_async("async_generator_with_context context yield")
@@ -138,7 +146,7 @@ async def async_generator_with_context_agent(create_server_with_agent) -> AsyncG
 
 @pytest.fixture
 async def sync_function_resume_agent(create_server_with_agent) -> AsyncGenerator[tuple[Server, A2AClient]]:
-    def sync_function_resume_agent(message: Message, context: Context):
+    def sync_function_resume_agent(message: Message, context: RunContext):
         """Synchronous function agent that requires input and handles resume."""
         resume_message = context.yield_sync(
             TaskStatus(
@@ -154,7 +162,7 @@ async def sync_function_resume_agent(create_server_with_agent) -> AsyncGenerator
 
 @pytest.fixture
 async def sync_generator_resume_agent(create_server_with_agent) -> AsyncGenerator[tuple[Server, A2AClient]]:
-    def sync_generator_resume_agent(message: Message, context: Context):
+    def sync_generator_resume_agent(message: Message, context: RunContext):
         """Synchronous generator agent that requires input and handles resume."""
         yield "sync_generator_resume_agent: starting"
         resume_message = yield TaskStatus(
@@ -168,7 +176,7 @@ async def sync_generator_resume_agent(create_server_with_agent) -> AsyncGenerato
 
 @pytest.fixture
 async def async_function_resume_agent(create_server_with_agent) -> AsyncGenerator[tuple[Server, A2AClient]]:
-    async def async_function_resume_agent(message: Message, context: Context):
+    async def async_function_resume_agent(message: Message, context: RunContext):
         """Asynchronous function agent that requires input and handles resume."""
         resume_message = await context.yield_async(
             TaskStatus(state=TaskState.input_required, message=create_text_message_object(content="Need input"))
@@ -181,7 +189,7 @@ async def async_function_resume_agent(create_server_with_agent) -> AsyncGenerato
 
 @pytest.fixture
 async def async_generator_resume_agent(create_server_with_agent) -> AsyncGenerator[tuple[Server, A2AClient]]:
-    async def async_generator_resume_agent(message: Message, context: Context):
+    async def async_generator_resume_agent(message: Message, context: RunContext):
         """Asynchronous generator agent that requires input and handles resume."""
         yield "async_generator_resume_agent: starting"
         resume_message = yield TaskStatus(
@@ -404,3 +412,35 @@ async def test_async_generator_streaming(async_generator_agent):
     # Should see multiple working state messages for each yield
     working_events = [e for e in status_events if e.root.result.status.state == TaskState.working]
     assert len(working_events) >= 2  # At least 2 yields from the generator
+
+
+async def test_yield_of_all_types(create_server_with_agent):
+    async def yielder_of_all_types_agent(message: Message, context: RunContext) -> AsyncIterator[RunYield]:
+        """Synchronous function agent that returns a string directly."""
+        text_part = TextPart(text="text")
+        message = Message(parts=[text_part], role=Role.agent, message_id=str(uuid.uuid4()))
+        yield message
+        yield text_part
+        yield TaskStatus(message=message, state=TaskState.working)
+        yield Artifact(artifact_id=str(uuid.uuid4()), parts=[text_part])
+        yield FilePart(file=FileWithBytes(bytes="0", name="test.txt"))
+        yield DataPart(data={"a": 1})
+        yield TaskStatusUpdateEvent(
+            status=TaskStatus(state=TaskState.working, message=message),
+            task_id=context.task_id,
+            context_id=context.context_id,
+            final=False,
+        )
+        yield TaskArtifactUpdateEvent(
+            artifact=Artifact(artifact_id=str(uuid.uuid4()), parts=[text_part]),
+            context_id=context.context_id,
+            task_id=context.task_id,
+        )
+        yield "text"
+        yield {"metadata": "lol"}
+
+    async with create_server_with_agent(yielder_of_all_types_agent) as (server, client):
+        resp = await client.send_message(request=create_send_request_object("hello"))
+        assert resp.root.result.status.state == TaskState.completed
+        assert len(resp.root.result.history) == 9
+        assert len(resp.root.result.artifacts) == 2

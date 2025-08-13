@@ -5,17 +5,26 @@
 
 import { useSearchParams } from 'next/navigation';
 import type { PropsWithChildren } from 'react';
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useFieldArray, useFormContext } from 'react-hook-form';
+import { match } from 'ts-pattern';
+import { v4 as uuid } from 'uuid';
 
+import { buildA2AClient } from '#api/a2a/client.ts';
+import type { ChatRun } from '#api/a2a/types.ts';
 import { getErrorCode } from '#api/utils.ts';
 import { useHandleError } from '#hooks/useHandleError.ts';
 import { usePrevious } from '#hooks/usePrevious.ts';
 import { useUpdateSearchParams } from '#hooks/useUpdateSearchParams.ts';
 import { useAgent } from '#modules/agents/api/queries/useAgent.ts';
 import { useListAgents } from '#modules/agents/api/queries/useListAgents.ts';
+import { Role } from '#modules/messages/api/types.ts';
+import { UIMessagePartKind, UIMessageStatus, type UIUserMessage } from '#modules/messages/types.ts';
+import { addTranformedMessagePart, getMessageRawContent } from '#modules/messages/utils.ts';
 import { isNotNull } from '#utils/helpers.ts';
 
+import { type UIComposePart, UIComposePartKind } from '../a2a/types';
+import { createSequentialInputDataPart, handleTaskStatusUpdate } from '../a2a/utils';
 import { SEQUENTIAL_WORKFLOW_AGENT_NAME, SEQUENTIAL_WORKFLOW_AGENTS_URL_PARAM } from '../sequential/constants';
 import type { ComposeStep, SequentialFormValues } from './compose-context';
 import { ComposeContext, ComposeStatus } from './compose-context';
@@ -28,6 +37,9 @@ export function ComposeProvider({ children }: PropsWithChildren) {
 
   const errorHandler = useHandleError();
 
+  const pendingSubscription = useRef<() => void>(undefined);
+  const pendingRun = useRef<ChatRun<UIComposePart>>(undefined);
+
   const { handleSubmit, getValues, setValue, watch } = useFormContext<SequentialFormValues>();
   const stepsFields = useFieldArray<SequentialFormValues>({ name: 'steps' });
   const { replace: replaceSteps } = stepsFields;
@@ -35,10 +47,18 @@ export function ComposeProvider({ children }: PropsWithChildren) {
 
   const { data: sequentialAgent } = useAgent({ name: SEQUENTIAL_WORKFLOW_AGENT_NAME });
 
-  const lastStep = steps.at(-1);
-  const result = useMemo(() => lastStep?.result, [lastStep]);
+  const a2aAgentClient = useMemo(
+    () =>
+      sequentialAgent &&
+      buildA2AClient<UIComposePart>({
+        providerId: sequentialAgent.provider.id,
+        onStatusUpdate: handleTaskStatusUpdate,
+      }),
+    [sequentialAgent],
+  );
 
-  // const lastAgentIdx = 0;
+  const lastStep = steps.at(-1);
+  const result = useMemo(() => (lastStep?.result ? getMessageRawContent(lastStep.result) : undefined), [lastStep]);
 
   const previousSteps = usePrevious(steps);
 
@@ -62,129 +82,28 @@ export function ComposeProvider({ children }: PropsWithChildren) {
         agentNames
           .map((name) => {
             const agent = agents.find((agent) => name === agent.name);
-            return agent ? { agent, instruction: '' } : null;
+            return agent ? { agent, instruction: '', status: ComposeStatus.Ready } : null;
           })
           .filter(isNotNull),
       );
     }
   }, [agents, replaceSteps, searchParams, steps.length]);
 
-  // const { isPending, stopAgent, reset } = useRunAgent({
-  //   onDone: () => {
-  //     const steps = getValues('steps');
-
-  //     replaceSteps(
-  //       steps.map((step) => {
-  //         step.isPending = false;
-
-  //         if (step.stats && !step.stats?.endTime) {
-  //           step.stats.endTime = Date.now();
-  //         }
-
-  //         return step;
-  //       }),
-  //     );
-  //   },
-  //   onFailed: (_, error) => {
-  //     handleError(error);
-  //   },
-  // TODO: A2A
-  // onPart: (event) => {
-  //   const { part } = event;
-  //   if (isArtifactPart(part)) {
-  //     return;
-  //   }
-  //   // TODO: we could probably figure out better typing
-  //   const { agent_idx, content } = part as ComposeMessagePart;
-  //   const step = getStep(agent_idx);
-  //   if (!step) {
-  //     return;
-  //   }
-  //   const updatedStep = {
-  //     ...step,
-  //     isPending: true,
-  //     stats: {
-  //       startTime: step.stats?.startTime ?? Date.now(),
-  //     },
-  //     result: `${step.result ?? ''}${content ?? ''}`,
-  //   };
-  //   updateStep(agent_idx, updatedStep);
-  //   if (agent_idx > 0) {
-  //     const stepsBefore = getValues('steps').slice(0, agent_idx);
-  //     stepsBefore.forEach((step, stepsBeforeIndex) => {
-  //       if (step.isPending || !step.stats?.endTime) {
-  //         updateStep(stepsBeforeIndex, { ...step, isPending: false, stats: { ...step.stats, endTime: Date.now() } });
-  //       }
-  //     });
-  //   }
-  // },
-  // onCompleted: (event) => {
-  //   const finalAgentIdx = steps.length - 1;
-  //   const output = extractOutput(
-  //     event.run.output.map((message) => {
-  //       return {
-  //         ...message,
-  //         parts: message.parts.filter((part) => (part as ComposeMessagePart).agent_idx === finalAgentIdx),
-  //       };
-  //     }),
-  //   );
-  //   const lastStep = getValues('steps').at(-1);
-  //   updateStep(finalAgentIdx, { ...lastStep!, result: output });
-  // },
-  // onGeneric: (event) => {
-  //   const { generic } = event;
-  //   const { agent_idx } = generic;
-  //   if (isNotNull(agent_idx)) {
-  //     if (agent_idx !== lastAgentIdx) {
-  //       const steps = getValues('steps');
-  //       const pendingStepIndex = steps.findIndex((step) => step.isPending);
-  //       const pendingStep = steps.at(pendingStepIndex);
-  //       if (pendingStep) {
-  //         const updatedStep = {
-  //           ...pendingStep,
-  //           isPending: false,
-  //           stats: { ...pendingStep.stats, endTime: Date.now() },
-  //         };
-  //         updateStep(pendingStepIndex, updatedStep);
-  //         const nextStepIndex = pendingStepIndex + 1;
-  //         const nextStep = steps.at(pendingStepIndex + 1);
-  //         if (nextStep) {
-  //           const nextUpdatedStep = {
-  //             ...nextStep,
-  //             isPending: true,
-  //             stats: {
-  //               startTime: nextStep.stats?.startTime ?? Date.now(),
-  //             },
-  //           };
-  //           updateStep(nextStepIndex, nextUpdatedStep);
-  //         }
-  //       }
-  //     }
-  //     if (generic) {
-  //       const step = getStep(agent_idx);
-  //       const metadata = createTrajectoryMetadata(generic);
-  //       const updatedStep = {
-  //         ...step,
-  //         isPending: true,
-  //         stats: {
-  //           startTime: step.stats?.startTime ?? Date.now(),
-  //         },
-  //         logs: [...(step.logs ?? []), metadata?.message].filter(isNotNull),
-  //       };
-  //       updateStep(agent_idx, updatedStep);
-  //     }
-  //     lastAgentIdx = agent_idx;
-  //   }
-  // },
-  // });
-
-  // const getStep = useCallback((idx: number) => getValues(`steps.${idx}`), [getValues]);
+  const getActiveStepIdx = useCallback(() => {
+    const steps = getValues(`steps`);
+    return steps.findLastIndex(({ status }) => status === ComposeStatus.InProgress);
+  }, [getValues]);
 
   const updateStep = useCallback(
-    (idx: number, value: ComposeStep) => {
-      setValue(`steps.${idx}`, value);
+    (idx: number, updater: ComposeStep | ((step: ComposeStep) => ComposeStep)) => {
+      const step = getValues(`steps`).at(idx);
+      if (!step) {
+        throw new Error(`Unexpected step at index ${idx}.`);
+      }
+
+      setValue(`steps.${idx}`, typeof updater === 'function' ? updater(step) : updater);
     },
-    [setValue],
+    [getValues, setValue],
   );
 
   const handleError = useCallback(
@@ -198,10 +117,27 @@ export function ComposeProvider({ children }: PropsWithChildren) {
     [errorHandler],
   );
 
+  const onDone = useCallback(() => {
+    const steps = getValues('steps');
+
+    replaceSteps(
+      steps.map((step) => {
+        return {
+          ...step,
+          status: ComposeStatus.Completed,
+          stats: { ...step.stats, endTime: step.stats?.endTime ?? Date.now() },
+        };
+      }),
+    );
+  }, [getValues, replaceSteps]);
+
   const send = useCallback(
     async (steps: ComposeStep[]) => {
       try {
-        if (!sequentialAgent) {
+        if (pendingRun.current || pendingSubscription.current) {
+          throw new Error('A run is already in progress');
+        }
+        if (!a2aAgentClient) {
           throw new Error(`'${SEQUENTIAL_WORKFLOW_AGENT_NAME}' agent is not available.`);
         }
 
@@ -209,8 +145,7 @@ export function ComposeProvider({ children }: PropsWithChildren) {
           updateStep(idx, {
             ...step,
             result: undefined,
-            isPending: idx === 0,
-            logs: [],
+            status: idx === 0 ? ComposeStatus.InProgress : ComposeStatus.Ready,
             stats:
               idx === 0
                 ? {
@@ -220,23 +155,69 @@ export function ComposeProvider({ children }: PropsWithChildren) {
           });
         });
 
-        // TODO: A2A
-        // await runAgent({
-        //   agent: sequentialAgent,
-        //   parts: [
-        //     createMessagePart({
-        //       content: JSON.stringify({
-        //         steps: steps.map(({ agent, instruction }) => ({ agent: agent.name, instruction })),
-        //       }),
-        //       content_type: 'application/json',
-        //     }),
-        //   ],
-        // });
+        const userMessage: UIUserMessage = {
+          id: uuid(),
+          role: Role.User,
+          parts: [createSequentialInputDataPart(steps)],
+        };
+
+        const run = a2aAgentClient.chat({
+          message: userMessage,
+          contextId: uuid(),
+        });
+        pendingRun.current = run;
+
+        pendingSubscription.current = run.subscribe(({ parts }) => {
+          parts.forEach((part) => {
+            match(part)
+              .with({ kind: UIComposePartKind.SequentialWorkflow }, ({ agentIdx }) => {
+                const activeStepIdx = getActiveStepIdx();
+
+                if (activeStepIdx !== agentIdx) {
+                  updateStep(activeStepIdx, (step) => ({
+                    ...step,
+                    status: ComposeStatus.Completed,
+                    stats: { ...step.stats, endTime: Date.now() },
+                  }));
+
+                  updateStep(agentIdx, (step) => ({
+                    ...step,
+                    status: ComposeStatus.InProgress,
+                    stats: {
+                      startTime: step.stats?.startTime ?? Date.now(),
+                    },
+                  }));
+                }
+              })
+              .otherwise((part) => {
+                const activeStepIdx = getActiveStepIdx();
+
+                const step = getValues(`steps.${activeStepIdx}`);
+                const result = step.result ?? {
+                  id: uuid(),
+                  role: Role.Agent,
+                  parts: [],
+                  status: UIMessageStatus.InProgress,
+                };
+
+                const updatedParts = addTranformedMessagePart(part, result);
+                result.parts = updatedParts;
+
+                updateStep(activeStepIdx, { ...step, result });
+              });
+          });
+        });
+
+        await run.done;
       } catch (error) {
         handleError(error);
+      } finally {
+        onDone();
+        pendingRun.current = undefined;
+        pendingSubscription.current = undefined;
       }
     },
-    [sequentialAgent, updateStep, handleError],
+    [a2aAgentClient, updateStep, getActiveStepIdx, getValues, handleError, onDone],
   );
 
   const onSubmit = useCallback(() => {
@@ -245,40 +226,59 @@ export function ComposeProvider({ children }: PropsWithChildren) {
     })();
   }, [handleSubmit, send]);
 
-  const handleCancel = useCallback(() => {
-    const steps = getValues('steps');
-    replaceSteps(
-      steps.map((step) => ({
-        ...step,
-        stats: {
-          ...step.stats,
-          endTime: step.stats?.endTime ?? Date.now(),
-        },
-        isPending: false,
-      })),
-    );
+  const handleCancel = useCallback(async () => {
+    if (pendingRun.current && pendingSubscription.current) {
+      const steps = getValues('steps');
 
-    // stopAgent();
+      const hasContent = steps.some(({ result }) =>
+        Boolean(result?.parts.some((part) => part.kind !== UIMessagePartKind.Text)),
+      );
+
+      replaceSteps(
+        steps.map(({ stats, result, ...step }) => ({
+          ...step,
+          ...(hasContent
+            ? {
+                result,
+                stats: {
+                  ...stats,
+                  endTime: stats?.endTime ?? Date.now(),
+                },
+              }
+            : {
+                status: ComposeStatus.Ready,
+              }),
+        })),
+      );
+
+      pendingSubscription.current();
+      await pendingRun.current.cancel();
+    } else {
+      throw new Error('No run in progress');
+    }
   }, [getValues, replaceSteps]);
 
   const handleReset = useCallback(() => {
-    // reset();
     replaceSteps([]);
   }, [replaceSteps]);
 
-  const isPending = false;
+  const value = useMemo(() => {
+    let status = ComposeStatus.Ready;
+    if (steps.some(({ status }) => status === ComposeStatus.InProgress)) {
+      status = ComposeStatus.InProgress;
+    } else if (steps.length && steps.every(({ status }) => status === ComposeStatus.Completed)) {
+      status = ComposeStatus.Completed;
+    }
 
-  const value = useMemo(
-    () => ({
+    return {
       result,
-      status: isPending ? ComposeStatus.InProgress : result ? ComposeStatus.Completed : ComposeStatus.Ready,
+      status,
       stepsFields,
       onSubmit,
       onCancel: handleCancel,
       onReset: handleReset,
-    }),
-    [result, isPending, stepsFields, onSubmit, handleCancel, handleReset],
-  );
+    };
+  }, [steps, result, stepsFields, onSubmit, handleCancel, handleReset]);
 
   return <ComposeContext.Provider value={value}>{children}</ComposeContext.Provider>;
 }

@@ -56,15 +56,18 @@ $input-height: rem(88px);
   );
 }
 
-.scrollRef {
-  position: absolute;
-  inset-block-end: 0;
-  inset-inline-start: 0;
-}
-
 .bottom {
   position: relative;
-  min-inline-size: 0;
+}
+
+.bottomHolder {
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+  padding-block-end: $spacing-07;
+  margin-block-end: -$spacing-07;
+}
+
+.bottomContainer {
   min-block-size: rem(88px);
   display: flex;
   flex-direction: column;

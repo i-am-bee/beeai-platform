@@ -4,14 +4,14 @@
  */
 
 import { ArrowLeft, PlayFilledAlt, StopOutlineFilled } from '@carbon/icons-react';
-import { Button, IconButton } from '@carbon/react';
+import { Button } from '@carbon/react';
 import clsx from 'clsx';
 import { useFormState } from 'react-hook-form';
 
 import { TransitionLink } from '#components/TransitionLink/TransitionLink.tsx';
 import { VersionTag } from '#components/VersionTag/VersionTag.tsx';
 import type { Agent } from '#modules/agents/api/types.ts';
-import NewSession from '#modules/runs/components/NewSession.svg';
+import { NewSessionButton } from '#modules/runs/components/NewSessionButton.tsx';
 import { routes } from '#utils/router.ts';
 
 import { AddAgentButton } from '../components/AddAgentButton';
@@ -48,18 +48,17 @@ export function SequentialSetup() {
     >
       <div className={classes.content}>
         <div className={classes.header}>
-          {result ? (
-            <>
-              <h1>Sequential workflow</h1>
-              <IconButton kind="tertiary" size="sm" label="New session" autoAlign onClick={() => onReset()}>
-                <NewSession />
-              </IconButton>
-            </>
-          ) : (
-            <h1>
-              Compose playground <VersionTag>alpha</VersionTag>
-            </h1>
-          )}
+          <h1>
+            {result ? (
+              'Sequential workflow'
+            ) : (
+              <>
+                Compose playground <VersionTag>alpha</VersionTag>
+              </>
+            )}
+          </h1>
+
+          {isCompleted && <NewSessionButton onClick={() => onReset()} />}
         </div>
 
         <h2 className={classes.label}>Sequence</h2>
@@ -72,7 +71,7 @@ export function SequentialSetup() {
             <AddAgentButton
               isDisabled={isPending}
               onSelectAgent={(agent: Agent) => {
-                append({ agent, instruction: '' });
+                append({ agent, instruction: '', status: ComposeStatus.Ready });
               }}
             />
           )}
