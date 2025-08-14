@@ -13,11 +13,17 @@ from mcp.client.stdio import StdioServerParameters, stdio_client
 from mcp.client.streamable_http import streamablehttp_client
 
 from beeai_sdk.a2a.extensions.base import BaseExtensionClient, BaseExtensionServer, BaseExtensionSpec
+from beeai_sdk.a2a.extensions.services.mcp.auth import create_auth_provider
+from beeai_sdk.server.context import RunContext
 
 _TRANSPORT_TYPES = Literal["streamable_http", "stdio"]
 
 _DEFAULT_DEMAND_NAME = "default"
 _DEFAULT_ALLOWED_TRANSPORTS: list[_TRANSPORT_TYPES] = ["streamable_http"]
+
+
+class Auth(pydantic.BaseModel):
+    redirect_uri: pydantic.AnyUrl
 
 
 class StdioTransport(pydantic.BaseModel):
@@ -32,6 +38,8 @@ class StreamableHTTPTransport(pydantic.BaseModel):
     type: Literal["streamable_http"] = "streamable_http"
 
     url: str
+
+    auth: Auth | None = None
 
 
 MCPTransport = Annotated[StdioTransport | StreamableHTTPTransport, pydantic.Field(discriminator="type")]
@@ -93,6 +101,10 @@ class MCPServiceExtensionMetadata(pydantic.BaseModel):
 
 
 class MCPServiceExtensionServer(BaseExtensionServer[MCPServiceExtensionSpec, MCPServiceExtensionMetadata]):
+    def handle_incoming_message(self, message: a2a.types.Message, context: RunContext):
+        super().handle_incoming_message(message, context)
+        self.context = context
+
     @override
     def parse_client_metadata(self, message: a2a.types.Message) -> MCPServiceExtensionMetadata | None:
         metadata = super().parse_client_metadata(message)
@@ -122,7 +134,13 @@ class MCPServiceExtensionServer(BaseExtensionServer[MCPServiceExtensionSpec, MCP
             ):
                 yield (read, write)
         elif isinstance(transport, StreamableHTTPTransport):
-            async with streamablehttp_client(url=transport.url) as (read, write, _):
+            async with streamablehttp_client(
+                url=transport.url, auth=create_auth_provider(auth=transport.auth, context=self.context)
+            ) as (
+                read,
+                write,
+                _,
+            ):
                 yield (read, write)
         else:
             raise NotImplementedError("Unsupported transport")
