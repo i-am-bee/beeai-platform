@@ -11,6 +11,7 @@ import anyio
 import pydantic
 import yaml
 
+from beeai_cli.commands.platform.configure_securityl import install_security
 from beeai_cli.configuration import Configuration
 
 
@@ -113,6 +114,9 @@ class BaseDriver(abc.ABC):
                 ],
                 f"Pulling image {image}",
             )
+
+        if any("oidc.enabled=true" in value.lower() for value in set_values_list):
+            await install_security(self)
 
         await self.run_in_vm(
             [
