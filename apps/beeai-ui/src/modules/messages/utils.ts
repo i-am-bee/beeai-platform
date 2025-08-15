@@ -65,6 +65,12 @@ export function getMessageTrajectories(message: UIMessage) {
   return trajectories;
 }
 
+export function getMessageForm(message: UIMessage) {
+  const form = message.parts.find((part) => part.kind === UIMessagePartKind.Form);
+
+  return form;
+}
+
 export function checkMessageStatus(message: UIAgentMessage) {
   const { status, error } = message;
 
