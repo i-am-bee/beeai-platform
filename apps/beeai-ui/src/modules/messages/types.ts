@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import type { FormRender } from '#api/a2a/extensions/ui/form.ts';
+
 import type { Role } from './api/types';
 
 export interface UIMessage {
@@ -21,7 +23,14 @@ export interface UIAgentMessage extends UIMessage {
   status: UIMessageStatus;
 }
 
-export type UIMessagePart = UITextPart | UIFilePart | UIDataPart | UISourcePart | UITrajectoryPart | UITransformPart;
+export type UIMessagePart =
+  | UITextPart
+  | UIFilePart
+  | UIDataPart
+  | UISourcePart
+  | UITrajectoryPart
+  | UIFormPart
+  | UITransformPart;
 
 export type UITextPart = {
   kind: UIMessagePartKind.Text;
@@ -57,6 +66,11 @@ export type UITrajectoryPart = {
   content?: string;
 };
 
+// TODO: Temporary for testing purposes
+export type UIFormPart = FormRender & {
+  kind: UIMessagePartKind.Form;
+};
+
 export type UITransformPart = {
   kind: UIMessagePartKind.Transform;
   id: string;
@@ -83,6 +97,7 @@ export enum UIMessagePartKind {
   Data = 'data',
   Source = 'source',
   Trajectory = 'trajectory',
+  Form = 'form',
   Transform = 'transform',
 }
 
@@ -96,4 +111,9 @@ export enum UIMessageStatus {
 export enum UITransformType {
   Source = 'source',
   Image = 'image',
+}
+
+export enum UIFormType {
+  Render = 'render',
+  Response = 'response',
 }
