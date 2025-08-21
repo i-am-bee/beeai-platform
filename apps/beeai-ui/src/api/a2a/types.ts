@@ -8,10 +8,12 @@ import type { ContextId, TaskId } from '#modules/tasks/api/types.ts';
 
 import type { LLMDemand, LLMFulfillment } from './extensions/services/llm';
 import type { MCPDemand, MCPFulfillment } from './extensions/services/mcp';
+import type { OAuthDemand, OAuthFulfillment } from './extensions/services/oauth-provider';
 import type { FormRender } from './extensions/ui/form';
 
 export enum RunResultType {
   FormRequired = 'form-required',
+  AuthRequired = 'auth-required',
   Parts = 'parts',
 }
 
@@ -21,13 +23,19 @@ export interface FormRequiredResult {
   form: FormRender;
 }
 
+export interface AuthRequiredResult {
+  type: RunResultType.AuthRequired;
+  taskId: TaskId;
+  url: string;
+}
+
 export interface PartsResult<UIGenericPart = never> {
   type: RunResultType.Parts;
   taskId: TaskId;
   parts: Array<UIMessagePart | UIGenericPart>;
 }
 
-export type ChatResult<UIGenericPart = never> = PartsResult<UIGenericPart> | FormRequiredResult;
+export type ChatResult<UIGenericPart = never> = PartsResult<UIGenericPart> | FormRequiredResult | AuthRequiredResult;
 
 export interface ChatParams {
   message: UIUserMessage;
@@ -38,12 +46,13 @@ export interface ChatParams {
 
 export interface ChatRun<UIGenericPart = never> {
   taskId?: TaskId;
-  done: Promise<null | FormRequiredResult>;
+  done: Promise<null | FormRequiredResult | AuthRequiredResult>;
   subscribe: (fn: (data: { parts: (UIMessagePart | UIGenericPart)[]; taskId: TaskId }) => void) => () => void;
   cancel: () => Promise<void>;
 }
 
 export interface Fulfillments {
-  mcp: (demand: MCPDemand) => Promise<MCPFulfillment>;
+  mcp: (demand: MCPDemand) => Promise<MCPFulfillment | null>;
   llm: (demand: LLMDemand) => Promise<LLMFulfillment>;
+  oauth: (demand: OAuthDemand) => Promise<OAuthFulfillment | null>;
 }

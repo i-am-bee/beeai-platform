@@ -5,15 +5,30 @@
 
 import { type PropsWithChildren, useCallback, useEffect, useState } from 'react';
 
+import { mcpExtension } from '#api/a2a/extensions/services/mcp.ts';
+import { extractServiceExtensionDemands } from '#api/a2a/extensions/utils.ts';
+import { useApp } from '#contexts/App/index.ts';
+import type { Agent } from '#modules/agents/api/types.ts';
+
 import { useCreateContext } from '../api/mutations/useCreateContext';
 import { useCreateContextToken } from '../api/mutations/useCreateContextToken';
 import { buildFullfilments } from './build-fulfillments';
 import { PlatformContext } from './platform-context';
 
-export function PlatformContextProvider({ children }: PropsWithChildren) {
+const mcpExtensionExtractor = extractServiceExtensionDemands(mcpExtension);
+
+export function PlatformContextProvider({ children, agent }: PropsWithChildren<{ agent: Agent | null }>) {
+  const mcpDemands = mcpExtensionExtractor(agent?.capabilities.extensions ?? []);
+  const { featureFlags } = useApp();
   const [contextId, setContextId] = useState<string | null>(null);
   const { mutateAsync: createContext } = useCreateContext();
   const { mutateAsync: createContextToken } = useCreateContextToken();
+  const [selectedMCPServers, setSelectedMCPServers] = useState<Record<string, string>>(
+    Object.keys(mcpDemands?.mcp_demands ?? {}).reduce((memo, value) => {
+      memo[value] = '';
+      return memo;
+    }, {}),
+  );
 
   const setContext = useCallback(
     (context: Awaited<ReturnType<typeof createContext>>) => {
@@ -31,6 +46,13 @@ export function PlatformContextProvider({ children }: PropsWithChildren) {
 
     createContext().then(setContext);
   }, [createContext, setContext]);
+
+  const selectMCPServer = useCallback(
+    (key: string, value: string) => {
+      setSelectedMCPServers((prev) => ({ ...prev, [key]: value }));
+    },
+    [setSelectedMCPServers],
+  );
 
   const getPlatformToken = useCallback(async () => {
     if (contextId === null) {
@@ -65,8 +87,8 @@ export function PlatformContextProvider({ children }: PropsWithChildren) {
 
   const getFullfilments = useCallback(async () => {
     const platformToken = await getPlatformToken();
-    return buildFullfilments(platformToken);
-  }, [getPlatformToken]);
+    return buildFullfilments({ platformToken, selectedMCPServers, featureFlags });
+  }, [getPlatformToken, featureFlags, selectedMCPServers]);
 
   useEffect(() => {
     createContext().then(setContext);
@@ -88,6 +110,8 @@ export function PlatformContextProvider({ children }: PropsWithChildren) {
         resetContext,
         getPlatformToken,
         getFullfilments,
+        selectMCPServer,
+        selectedMCPServers,
       }}
     >
       {children}
