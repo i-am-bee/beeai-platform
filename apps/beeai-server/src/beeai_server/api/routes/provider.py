@@ -16,6 +16,7 @@ from beeai_server.api.dependencies import (
 )
 from beeai_server.api.routes.a2a import proxy_request
 from beeai_server.api.schema.common import PaginatedResponse
+from beeai_server.api.schema.env import ListVariablesSchema, UpdateVariablesRequest
 from beeai_server.api.schema.provider import CreateProviderRequest
 from beeai_server.domain.models.permissions import AuthorizedUser
 from beeai_server.domain.models.provider import ProviderWithState
@@ -89,3 +90,22 @@ async def stream_logs(
 ) -> StreamingResponse:
     logs_iterator = await provider_service.stream_logs(provider_id=id)
     return streaming_response(logs_iterator())
+
+
+@router.put("/{id}/variables", status_code=fastapi.status.HTTP_201_CREATED)
+async def update_provider_variables(
+    id: UUID,
+    request: UpdateVariablesRequest,
+    provider_service: ProviderServiceDependency,
+    _: Annotated[AuthorizedUser, Depends(RequiresPermissions(providers={"write"}))],
+) -> None:
+    await provider_service.update_provider_env(provider_id=id, env=request.env)
+
+
+@router.get("/{id}/variables")
+async def list_provider_variables(
+    id: UUID,
+    provider_service: ProviderServiceDependency,
+    _: Annotated[AuthorizedUser, Depends(RequiresPermissions(providers={"read"}))],
+) -> ListVariablesSchema:
+    return ListVariablesSchema(env=await provider_service.list_provider_env(provider_id=id))
