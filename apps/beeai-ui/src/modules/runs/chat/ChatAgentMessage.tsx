@@ -7,6 +7,7 @@ import { useRef, useState } from 'react';
 import { useFocusWithin, useHover } from 'react-aria';
 
 import { Spinner } from '#components/Spinner/Spinner.tsx';
+import { MessageCanvas } from '#modules/canvas/components/MessageCanvas.tsx';
 import { MessageFiles } from '#modules/files/components/MessageFiles.tsx';
 import { MessageActions } from '#modules/messages/components/MessageActions.tsx';
 import { MessageContent } from '#modules/messages/components/MessageContent.tsx';
@@ -50,6 +51,8 @@ export function ChatAgentMessage({ message }: Props) {
       )}
 
       <MessageFiles message={message} />
+
+      <MessageCanvas message={message} />
 
       <MessageSources message={message} />
 
