@@ -30,7 +30,7 @@ $input-height: rem(88px);
   text-align: end;
   background-color: $layer;
   padding-block-end: $spacing-06;
-  z-index: 1;
+  z-index: z('modal');
 }
 
 .container {
