@@ -17,6 +17,7 @@ import type { Agent } from '#modules/agents/api/types.ts';
 import { FileUploadProvider } from '#modules/files/contexts/FileUploadProvider.tsx';
 import { useFileUpload } from '#modules/files/contexts/index.ts';
 import { convertFilesToUIFileParts } from '#modules/files/utils.ts';
+import type { RunFormValues } from '#modules/form/types.ts';
 import { Role } from '#modules/messages/api/types.ts';
 import type { UIAgentMessage, UIMessage, UIUserMessage } from '#modules/messages/types.ts';
 import { UIMessageStatus } from '#modules/messages/types.ts';
@@ -26,6 +27,7 @@ import { PlatformContextProvider } from '#modules/platform-context/contexts/Plat
 import type { RunStats } from '#modules/runs/types.ts';
 import { SourcesProvider } from '#modules/sources/contexts/SourcesProvider.tsx';
 import { getMessageSourcesMap } from '#modules/sources/utils.ts';
+import { isNotNull } from '#utils/helpers.ts';
 
 import { MessagesProvider } from '../../../messages/contexts/MessagesProvider';
 import { AgentStatusProvider } from '../agent-status/AgentStatusProvider';
@@ -124,7 +126,7 @@ function AgentRunProvider({ agent, children }: PropsWithChildren<Props>) {
   }, [setMessages, clearFiles, resetContext]);
 
   const run = useCallback(
-    async (input: string) => {
+    async ({ input }: { input?: string; formValues?: RunFormValues }) => {
       const contextId = getContextId();
 
       if (pendingRun.current || pendingSubscription.current) {
@@ -140,7 +142,7 @@ function AgentRunProvider({ agent, children }: PropsWithChildren<Props>) {
       const userMessage: UIUserMessage = {
         id: uuid(),
         role: Role.User,
-        parts: [createTextPart(input), ...convertFilesToUIFileParts(files)],
+        parts: [input ? createTextPart(input) : null, ...convertFilesToUIFileParts(files)].filter(isNotNull),
       };
       const agentMessage: UIAgentMessage = {
         id: uuid(),

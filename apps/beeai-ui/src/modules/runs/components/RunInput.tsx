@@ -16,7 +16,7 @@ import { dispatchInputEventOnTextarea, submitFormOnEnter } from '#utils/form-uti
 
 import { ChatDefaultTools } from '../chat/constants';
 import { useAgentRun } from '../contexts/agent-run';
-import type { RunAgentFormValues } from '../types';
+import type { RunRunFormValues } from '../types';
 import { PromptExamples } from './PromptExamples';
 import { RunFiles } from './RunFiles';
 import classes from './RunInput.module.scss';
@@ -48,7 +48,7 @@ export function RunInput({ promptExamples, onSubmit }: Props) {
 
   const isChatUi = interaction_mode === InteractionMode.MultiTurn;
 
-  const form = useForm<RunAgentFormValues>({
+  const form = useForm<RunRunFormValues>({
     mode: 'onChange',
     defaultValues: {
       tools: isChatUi ? ChatDefaultTools : [],
@@ -104,7 +104,7 @@ export function RunInput({ promptExamples, onSubmit }: Props) {
             onSubmit?.();
             resetForm();
 
-            await run(input);
+            await run({ input });
           })();
         }}
       >

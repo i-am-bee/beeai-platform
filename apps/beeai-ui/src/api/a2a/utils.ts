@@ -8,6 +8,7 @@ import { v4 as uuid } from 'uuid';
 
 import { getFileContentUrl } from '#modules/files/utils.ts';
 import type {
+  UIFormPart,
   UIMessagePart,
   UISourcePart,
   UITextPart,
@@ -21,6 +22,8 @@ import { isNotNull } from '#utils/helpers.ts';
 import { PLATFORM_FILE_CONTENT_URL_BASE } from './constants';
 import type { Citation } from './extensions/ui/citation';
 import { citationExtension } from './extensions/ui/citation';
+import type { FormRender } from './extensions/ui/form';
+import { formMessageExtension } from './extensions/ui/form';
 import type { TrajectoryMetadata } from './extensions/ui/trajectory';
 import { trajectoryExtension } from './extensions/ui/trajectory';
 import { extractUiExtensionData } from './extensions/utils';
@@ -28,6 +31,8 @@ import { extractUiExtensionData } from './extensions/utils';
 export const extractCitation = extractUiExtensionData(citationExtension);
 
 export const extractTrajectory = extractUiExtensionData(trajectoryExtension);
+
+export const extractForm = extractUiExtensionData(formMessageExtension);
 
 export function extractTextFromMessage(message: Message | undefined) {
   const text = message?.parts
@@ -55,7 +60,7 @@ export function convertMessageParts(uiParts: UIMessagePart[]): Part[] {
           return {
             kind: 'file',
             file: {
-              uri: `${PLATFORM_FILE_CONTENT_URL_BASE}${id}`,
+              uri: getFilePlatformUrl(id),
               name: filename,
               mimeType: type,
             },
@@ -155,4 +160,18 @@ export function createTextPart(text: string): UITextPart {
   };
 
   return textPart;
+}
+
+export function createFormPart(form: FormRender): UIFormPart | null {
+  const formPart: UIFormPart = {
+    kind: UIMessagePartKind.Form,
+    // TODO: Temporary for testing purposes
+    ...form,
+  };
+
+  return formPart;
+}
+
+export function getFilePlatformUrl(id: string) {
+  return `${PLATFORM_FILE_CONTENT_URL_BASE}${id}`;
 }
