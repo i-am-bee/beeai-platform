@@ -56,6 +56,8 @@ spec:
           env:
             - name: AUTH__DISABLE_AUTH
               value: "true"
+            - name: OIDC__DISABLE_OIDC
+              value: "true"
             - name: LOGGING__LEVEL_SQLALCHEMY
               value: INFO
             - name: PERSISTENCE__ENCRYPTION_KEY
@@ -81,6 +83,8 @@ spec:
           env:
             - name: AUTH__DISABLE_AUTH
               value: "true"
+            - name: OIDC__DISABLE_OIDC
+              value: "true"
             - name: LOGGING__LEVEL_SQLALCHEMY
               value: INFO
             - name: PERSISTENCE__ENCRYPTION_KEY
@@ -104,6 +108,8 @@ spec:
           {{- end }}
           env:
             - name: AUTH__DISABLE_AUTH
+              value: "true"
+            - name: OIDC__DISABLE_OIDC
               value: "true"
             - name: PERSISTENCE__ENCRYPTION_KEY
               value: "dummy"
@@ -192,6 +198,20 @@ spec:
                   name: beeai-platform-secret
             {{- if not .Values.auth.enabled }}
             - name: AUTH__DISABLE_AUTH
+              value: "true"
+            {{- end }}
+            {{- if .Values.oidc.enabled }}
+            {{- if .Values.oidc.admin_emails }}
+            - name: OIDC__ADMIN_EMAILS
+              value: {{ .Values.oidc.admin_emails | quote }}
+            {{- end }}
+            - name: OIDC__PROVIDERS
+              valueFrom:
+                secretKeyRef:
+                  key: providers.json
+                  name: beeai-oidc-providers
+            {{- else }}
+            - name: OIDC__DISABLE_OIDC
               value: "true"
             {{- end }}
             {{- if .Values.features.selfRegistration }}

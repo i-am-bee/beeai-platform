@@ -22,6 +22,7 @@ auth:
   adminPassword: ""
   jwtSecretKey: ""
   enabled: true # Warning, disable only for local deployments
+  
 
 # This sets the container image more information can be found here: https://kubernetes.io/docs/concepts/containers/images/
 image:
@@ -78,13 +79,12 @@ initContainers:
 
 oidc:
   enabled: false
-  discovery_url: "https://preprod.login.w3.ibm.com/oidc/endpoint/default/.well-known/openid-configuration"
-  admin_emails: "habeck@us.ibm.com"
+  admin_emails: "abhishek@in.ibm.com"
   nextauth_trust_host: true
   nextauth_secret: "<To generate a random string, you can use the Auth.js CLI: npx auth secret>"
   providers_path: "/providers"
   nextauth_url: "https://beeai.localhost:8336"
-  nextauth_providers: [
+  providers: [
     {
       "name": "w3id",
       "id": "w3id",
@@ -150,6 +150,7 @@ readinessProbe:
 
 # Additional volumes on the output Deployment definition.
 volumes: [ ]
+
 # - name: foo
 #   secret:
 #     secretName: mysecret

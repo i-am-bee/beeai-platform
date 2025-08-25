@@ -2,7 +2,9 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import base64
+import json
 import logging
+import os
 from collections import defaultdict
 from datetime import timedelta
 from functools import cache
@@ -85,6 +87,48 @@ class AuthConfiguration(BaseModel):
         return self
 
 
+class OidcProvider(BaseModel):
+    name: str
+    issuer: AnyUrl
+    client_id: str
+    client_secret: Secret[str]
+
+
+class OidcConfiguration(BaseModel):
+    disable_oidc: bool = False
+    admin_emails: list[str] = Field(default_factory=list)
+    providers: list[OidcProvider] = Field(default_factory=list)
+    scope: list[str] = ["openid", "email", "profile"]
+
+    @model_validator(mode="before")
+    @classmethod
+    def parse_providers(cls, values: dict) -> dict:
+        providers_string = os.environ.get("OIDC__PROVIDERS")
+        if providers_string:
+            try:
+                providers_data = json.loads(providers_string)
+                for p in providers_data:
+                    p["client_secret"] = Secret(p["client_secret"])
+                values["providers"] = providers_data
+            except json.JSONDecodeError as e:
+                raise ValueError(f"Invalid OIDC__PROVIDERS JSON: {e}") from e
+        return values
+
+    @model_validator(mode="after")
+    def validate_auth(self):
+        if self.disable_oidc:
+            logger.critical("Oauth Authentication is disabled! This is suitable only for local development.")
+            return self
+        if not self.providers:
+            raise ValueError("At least one OIDC provider must be configured if OIDC is enabled")
+        for provider in self.providers:
+            required = ["issuer", "client_id", "client_secret"]
+            for field in required:
+                if getattr(provider, field) is None:
+                    raise ValueError(f"'{field}' is required for provider '{provider.name}' if OIDC is enabled")
+        return self
+
+
 class McpConfiguration(BaseModel):
     gateway_endpoint_url: AnyUrl = AnyUrl("http://forge-svc:4444")
     toolkit_expiration_seconds: int = 24 * 60 * 60  # TODO bind to context together with vector stores
@@ -155,6 +199,7 @@ class Configuration(BaseSettings):
     )
 
     auth: AuthConfiguration = Field(default_factory=AuthConfiguration)
+    oidc: OidcConfiguration = Field(default_factory=OidcConfiguration)
     logging: LoggingConfiguration = Field(default_factory=LoggingConfiguration)
     agent_registry: AgentRegistryConfiguration = Field(default_factory=AgentRegistryConfiguration)
     mcp: McpConfiguration = Field(default_factory=McpConfiguration)

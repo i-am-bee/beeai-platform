@@ -84,6 +84,7 @@ class BaseDriver(abc.ABC):
                     "encryptionKey": "Ovx8qImylfooq4-HNwOzKKDcXLZCB3c_m0JlB9eJBxc=",
                     "features": {"uiNavigation": True, "selfRegistration": True},
                     "auth": {"enabled": False},
+                    "oidc": {"enabled": False},
                 }
             ).encode("utf-8"),
         )
