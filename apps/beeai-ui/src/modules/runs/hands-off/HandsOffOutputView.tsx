@@ -6,7 +6,7 @@
 import { Container } from '#components/layouts/Container.tsx';
 import { checkMessageContent, isAgentMessage } from '#modules/messages/utils.ts';
 
-import { useMessages } from '../../messages/contexts';
+import { useTasks } from '../../tasks/contexts/tasks-context';
 import { MessageTrajectories } from '../../trajectories/components/MessageTrajectories';
 import { NewSessionButton } from '../components/NewSessionButton';
 import { useAgentRun } from '../contexts/agent-run';
@@ -16,9 +16,9 @@ import { TaskStatusBar } from './TaskStatusBar';
 
 export function HandsOffOutputView() {
   const { input, isPending, cancel, clear } = useAgentRun();
-  const { messages } = useMessages();
+  const { tasks } = useTasks();
 
-  const message = messages.find(isAgentMessage);
+  const message = tasks.at(0)?.messages.find(isAgentMessage);
   const hasOutput = message ? checkMessageContent(message) : false;
   const containerSize = hasOutput ? 'md' : 'sm';
 

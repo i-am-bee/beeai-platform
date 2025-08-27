@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { InlineLoading } from '@carbon/react';
 import { useCallback, useRef, useState } from 'react';
 import { FormProvider, useForm } from 'react-hook-form';
 import { mergeRefs } from 'react-merge-refs';
@@ -16,7 +17,7 @@ import { dispatchInputEventOnTextarea, submitFormOnEnter } from '#utils/form-uti
 
 import { ChatDefaultTools } from '../chat/constants';
 import { useAgentRun } from '../contexts/agent-run';
-import type { RunAgentFormValues } from '../types';
+import type { RunRunFormValues } from '../types';
 import { PromptExamples } from './PromptExamples';
 import { RunFiles } from './RunFiles';
 import classes from './RunInput.module.scss';
@@ -41,14 +42,14 @@ export function RunInput({ promptExamples, onSubmit }: Props) {
       ui: { interaction_mode },
     },
     isPending,
-    run,
+    chat,
     cancel,
   } = useAgentRun();
   const { isPending: isFileUploadPending, isDisabled: isFileUploadDisabled } = useFileUpload();
 
   const isChatUi = interaction_mode === InteractionMode.MultiTurn;
 
-  const form = useForm<RunAgentFormValues>({
+  const form = useForm<RunRunFormValues>({
     mode: 'onChange',
     defaultValues: {
       tools: isChatUi ? ChatDefaultTools : [],
@@ -59,7 +60,8 @@ export function RunInput({ promptExamples, onSubmit }: Props) {
 
   const inputProps = register('input', { required: true });
   const inputValue = watch('input');
-  const isSubmitDisabled = isPending || isFileUploadPending || !inputValue || !contextId;
+  const isInitializing = !contextId;
+  const isSubmitDisabled = isPending || isFileUploadPending || !inputValue || isInitializing;
 
   const dispatchInputEventAndFocus = useCallback(() => {
     const inputElem = inputRef.current;
@@ -104,7 +106,7 @@ export function RunInput({ promptExamples, onSubmit }: Props) {
             onSubmit?.();
             resetForm();
 
-            await run(input);
+            await chat(input);
           })();
         }}
       >
@@ -129,12 +131,16 @@ export function RunInput({ promptExamples, onSubmit }: Props) {
           </div>
 
           <div className={classes.submit}>
-            <RunSubmit
-              isPending={isPending}
-              isFileUploadPending={isFileUploadPending}
-              disabled={isSubmitDisabled}
-              onCancel={cancel}
-            />
+            {!isInitializing ? (
+              <RunSubmit
+                isPending={isPending}
+                isFileUploadPending={isFileUploadPending}
+                disabled={isSubmitDisabled}
+                onCancel={cancel}
+              />
+            ) : (
+              <InlineLoading iconDescription="Initializing conversation" />
+            )}
           </div>
         </div>
 

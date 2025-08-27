@@ -52,4 +52,7 @@
 
 .submit {
   margin-inline-start: auto;
+  block-size: rem(32px);
+  display: flex;
+  align-items: center;
 }

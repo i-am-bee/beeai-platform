@@ -3,15 +3,22 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { useMemo } from 'react';
+
+import { formExtension } from '#api/a2a/extensions/ui/form.ts';
+import { extractServiceExtensionDemands } from '#api/a2a/extensions/utils.ts';
 import { MainContent } from '#components/layouts/MainContent.tsx';
 import type { Agent } from '#modules/agents/api/types.ts';
 import { SourcesPanel } from '#modules/sources/components/SourcesPanel.tsx';
 
-import { useMessages } from '../../messages/contexts';
+import { useTasks } from '../../tasks/contexts/tasks-context';
+import { RunFormView } from '../components/RunFormView';
 import { RunLandingView } from '../components/RunLandingView';
 import { useAgentRun } from '../contexts/agent-run';
 import { AgentRunProviders } from '../contexts/agent-run/AgentRunProvider';
 import { HandsOffOutputView } from './HandsOffOutputView';
+
+const formExtensionExtractor = extractServiceExtensionDemands(formExtension);
 
 interface Props {
   agent: Agent;
@@ -26,14 +33,24 @@ export function HandsOffView({ agent }: Props) {
 }
 
 function HandsOff() {
-  const { isPending } = useAgentRun();
-  const { messages } = useMessages();
+  const { agent, isPending } = useAgentRun();
 
-  const isIdle = !(isPending || messages?.length);
+  const formRender = useMemo(() => {
+    const { extensions } = agent.capabilities;
+    const formRender = extensions && formExtensionExtractor(extensions);
+
+    return formRender ?? undefined;
+  }, [agent.capabilities]);
+
+  const { tasks } = useTasks();
+
+  const isIdle = !(isPending || tasks?.length);
 
   return (
     <>
-      <MainContent spacing="md">{isIdle ? <RunLandingView /> : <HandsOffOutputView />}</MainContent>
+      <MainContent spacing="md">
+        {formRender ? <RunFormView formRender={formRender} /> : isIdle ? <RunLandingView /> : <HandsOffOutputView />}
+      </MainContent>
 
       <SourcesPanel />
     </>

@@ -3,16 +3,16 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 'use client';
-
 import { ArrowDown } from '@carbon/icons-react';
 import { IconButton } from '@carbon/react';
 
 import { Container } from '#components/layouts/Container.tsx';
 import { useIsScrolled } from '#hooks/useIsScrolled.ts';
 import { isAgentMessage, isUserMessage } from '#modules/messages/utils.ts';
+import { TaskProvider } from '#modules/tasks/contexts/task-context/TaskProvider.tsx';
 
 import { FileUpload } from '../../files/components/FileUpload';
-import { useMessages } from '../../messages/contexts';
+import { useTasks } from '../../tasks/contexts/tasks-context';
 import { NewSessionButton } from '../components/NewSessionButton';
 import { RunInput } from '../components/RunInput';
 import { RunStatusBar } from '../components/RunStatusBar';
@@ -25,7 +25,7 @@ import { ChatUserMessage } from './ChatUserMessage';
 export function ChatMessagesView() {
   const { scrollElementRef, observeElementRef, isScrolled, scrollToBottom } = useIsScrolled();
   const { isPending, clear } = useAgentRun();
-  const { messages } = useMessages();
+  const { tasks } = useTasks();
   const {
     status: { isNotInstalled, isStarting },
   } = useAgentStatus();
@@ -40,19 +40,26 @@ export function ChatMessagesView() {
             </header>
 
             <ol className={classes.messages} aria-label="messages">
-              {messages.map((message, idx) => {
-                const isUser = isUserMessage(message);
-                const isAgent = isAgentMessage(message);
-                const isLast = idx == messages.length - 1;
-
+              {tasks.map((task) => {
+                const { messages } = task;
                 return (
-                  <li key={message.id} className={classes.message}>
-                    {isUser && <ChatUserMessage message={message} />}
+                  <TaskProvider task={task} key={task.id}>
+                    {task.messages.map((message, idx) => {
+                      const isUser = isUserMessage(message);
+                      const isAgent = isAgentMessage(message);
+                      const isLast = idx == messages.length - 1;
 
-                    {isAgent && <ChatAgentMessage message={message} />}
+                      return (
+                        <li key={message.id} className={classes.message}>
+                          {isUser && <ChatUserMessage message={message} />}
 
-                    {isLast && <div ref={observeElementRef} />}
-                  </li>
+                          {isAgent && <ChatAgentMessage message={message} />}
+
+                          {isLast && <div ref={observeElementRef} />}
+                        </li>
+                      );
+                    })}
+                  </TaskProvider>
                 );
               })}
             </ol>

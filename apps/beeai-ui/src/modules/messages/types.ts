@@ -3,25 +3,43 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import type { Task } from '@a2a-js/sdk';
+
+import type { FormRender, FormResponse } from '#api/a2a/extensions/ui/form.ts';
+
 import type { Role } from './api/types';
 
-export interface UIMessage {
+export interface UITask extends Omit<Task, 'history'> {
+  messages: UIMessage[];
+}
+
+export interface UIMessageBase {
   id: string;
   role: Role;
   parts: UIMessagePart[];
   error?: Error;
 }
 
-export interface UIUserMessage extends UIMessage {
+export interface UIUserMessage extends UIMessageBase {
   role: Role.User;
+  form?: UIMessageForm;
 }
 
-export interface UIAgentMessage extends UIMessage {
+export interface UIAgentMessage extends UIMessageBase {
   role: Role.Agent;
   status: UIMessageStatus;
 }
 
-export type UIMessagePart = UITextPart | UIFilePart | UIDataPart | UISourcePart | UITrajectoryPart | UITransformPart;
+export type UIMessage = UIUserMessage | UIAgentMessage;
+
+export type UIMessagePart =
+  | UITextPart
+  | UIFilePart
+  | UIDataPart
+  | UISourcePart
+  | UITrajectoryPart
+  | UIFormPart
+  | UITransformPart;
 
 export type UITextPart = {
   kind: UIMessagePartKind.Text;
@@ -57,6 +75,11 @@ export type UITrajectoryPart = {
   content?: string;
 };
 
+// TODO: Temporary for testing purposes
+export type UIFormPart = FormRender & {
+  kind: UIMessagePartKind.Form;
+};
+
 export type UITransformPart = {
   kind: UIMessagePartKind.Transform;
   id: string;
@@ -83,6 +106,7 @@ export enum UIMessagePartKind {
   Data = 'data',
   Source = 'source',
   Trajectory = 'trajectory',
+  Form = 'form',
   Transform = 'transform',
 }
 
@@ -96,4 +120,9 @@ export enum UIMessageStatus {
 export enum UITransformType {
   Source = 'source',
   Image = 'image',
+}
+
+export interface UIMessageForm {
+  request: FormRender;
+  response: FormResponse;
 }
