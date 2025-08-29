@@ -144,7 +144,7 @@ oidc:
   ]
 ```
 
-Note: the `class` in the providers entry must be a valid provider supported by next-auth. see: https://github.com/nextauthjs/next-auth-example/blob/main/auth.ts
+Note: The `name` in the providers entry must be one of "w3id", "IBMiD", or "ibm".
 
 - When debugging the ui component (See debugging individual components), copy the env.example as .env and update the following oidc specific values:
 
@@ -161,34 +161,11 @@ NEXTAUTH_DEBUG="true"
 
 **Configure nextjs to run in experimental https mode**
 
-Run this command from a terminal in the apps/beeai-ui  folder of your project to create the SSL certificates (one time):
+Run this command from a terminal in the apps/beeai-ui folder of your project to create the SSL certificates (one time):
 
 `pnpm next dev --experimental-https`
 
-Output:
-```bash
- ⚠ Self-signed certificates are currently an experimental feature, use with caution.
-   Downloading mkcert package...
-   Download response was successful, writing to disk
-   Attempting to generate self signed certificate. This may prompt for your password
-Sudo password:
-Sorry, try again.
-Sudo password:
-   CA Root certificate created in /Users/habeck/Library/Application Support/mkcert
-   Certificates created in /Users/habeck/beeai-istio-helm/beeai-platform/apps/beeai-ui/certificates
-   Adding certificates to .gitignore
-   ▲ Next.js 15.3.4
-   - Local:        https://localhost:3000
-   - Network:      https://192.168.1.92:3000
-   - Environments: .env
-   - Experiments (use with caution):
-     ⨯ cssChunking
-
- ✓ Starting...
- ✓ Ready in 1705ms
- ⚠ ./src/auth.ts
-```
-Then press CTRL+C  stop the server.
+Once the server has reached a ready state, stop it with CTRL+C.
 
 **Updating .vscode/launch.json**
 
