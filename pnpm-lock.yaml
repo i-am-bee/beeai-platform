@@ -131,6 +131,9 @@ importers:
       immer:
         specifier: ^10.1.1
         version: 10.1.1
+      jose:
+        specifier: 6.1.0
+        version: 6.1.0
       json5:
         specifier: ^2.2.3
         version: 2.2.3
@@ -4681,8 +4684,8 @@ packages:
     resolution: {integrity: sha512-H0dkQoCa3b2VEeKQBOxFph+JAbcrQdE7KC0UkqwpLmv2EC4P41QXP+rqo9wYodACiG5/WM5s9oDApTU8utwj9g==}
     engines: {node: '>= 0.4'}
 
-  jose@6.0.12:
-    resolution: {integrity: sha512-T8xypXs8CpmiIi78k0E+Lk7T2zlK4zDyg+o1CZ4AkOHgDg98ogdP2BeZ61lTFKFyoEwJ9RgAgN+SdM3iPgNonQ==}
+  jose@6.1.0:
+    resolution: {integrity: sha512-TTQJyoEoKcC1lscpVDCSsVgYzUDg/0Bt3WE//WiTPK6uOCQC2KZS4MpugbMWt/zyjkopgZoXhZuCi00gLudfUA==}
 
   js-levenshtein@1.1.6:
     resolution: {integrity: sha512-X2BB11YZtrRqY4EnQcLX5Rh373zbK4alC1FW7D7MBhL2gtcC17cTnr6DmfHZeS0s2rTHjUTMMHfG7gO8SSdw+g==}
@@ -6837,7 +6840,7 @@ snapshots:
   '@auth/core@0.40.0(@simplewebauthn/server@13.1.2)':
     dependencies:
       '@panva/hkdf': 1.2.1
-      jose: 6.0.12
+      jose: 6.1.0
       oauth4webapi: 3.7.0
       preact: 10.24.3
       preact-render-to-string: 6.5.11(preact@10.24.3)
@@ -12352,7 +12355,7 @@ snapshots:
       has-symbols: 1.1.0
       set-function-name: 2.0.2
 
-  jose@6.0.12: {}
+  jose@6.1.0: {}
 
   js-levenshtein@1.1.6: {}
 

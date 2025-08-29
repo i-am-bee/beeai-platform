@@ -4,6 +4,7 @@
  */
 
 'use client';
+import { SessionProvider } from 'next-auth/react';
 import type { PropsWithChildren } from 'react';
 
 import { AppProvider } from '#contexts/App/AppProvider.tsx';
@@ -21,18 +22,20 @@ interface Props {
 
 export default function Providers({ featureFlags, children }: PropsWithChildren<Props>) {
   return (
-    <ToastProvider>
-      <QueryProvider>
-        <ProgressBarProvider>
-          <ThemeProvider>
-            <RouteTransitionProvider>
-              <ModalProvider>
-                <AppProvider featureFlags={featureFlags}>{children}</AppProvider>
-              </ModalProvider>
-            </RouteTransitionProvider>
-          </ThemeProvider>
-        </ProgressBarProvider>
-      </QueryProvider>
-    </ToastProvider>
+    <SessionProvider basePath={'/auth'}>
+      <ToastProvider>
+        <QueryProvider>
+          <ProgressBarProvider>
+            <ThemeProvider>
+              <RouteTransitionProvider>
+                <ModalProvider>
+                  <AppProvider featureFlags={featureFlags}>{children}</AppProvider>
+                </ModalProvider>
+              </RouteTransitionProvider>
+            </ThemeProvider>
+          </ProgressBarProvider>
+        </QueryProvider>
+      </ToastProvider>
+    </SessionProvider>
   );
 }
