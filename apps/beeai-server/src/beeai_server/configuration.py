@@ -2,7 +2,9 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import base64
+import json
 import logging
+import os
 from collections import defaultdict
 from datetime import timedelta
 from functools import cache
@@ -66,22 +68,106 @@ class AgentRegistryConfiguration(BaseModel):
     sync_period_cron: str = Field(default="*/5 * * * *")  # every 10 minutes
 
 
-class AuthConfiguration(BaseModel):
+class OidcProvider(BaseModel):
+    name: str
+    issuer: AnyUrl
+    client_id: str
+    client_secret: Secret[str]
+
+
+class OidcConfiguration(BaseModel):
+    disable_oidc: bool = False
+    admin_emails: list[str] = Field(default_factory=list)
+    providers: list[OidcProvider] = Field(default_factory=list)
+    scope: list[str] = ["openid", "email", "profile"]
+
+    @model_validator(mode="before")
+    @classmethod
+    def parse_providers(cls, values: dict) -> dict:
+        providers_string = os.environ.get("OIDC__PROVIDERS")
+        if providers_string:
+            try:
+                providers_data = json.loads(providers_string)
+                for p in providers_data:
+                    p["client_secret"] = Secret(p["client_secret"])
+                values["providers"] = providers_data
+            except json.JSONDecodeError as e:
+                raise ValueError(f"Invalid OIDC__PROVIDERS JSON: {e}") from e
+        return values
+
+    @model_validator(mode="after")
+    def validate_auth(self):
+        if self.disable_oidc:
+            logger.critical("Oauth Authentication is disabled! This is suitable only for local development.")
+            return self
+        if not self.providers:
+            raise ValueError("At least one OIDC provider must be configured if OIDC is enabled")
+        for provider in self.providers:
+            required = ["issuer", "client_id", "client_secret"]
+            for field in required:
+                if getattr(provider, field) is None:
+                    raise ValueError(f"'{field}' is required for provider '{provider.name}' if OIDC is enabled")
+        return self
+
+
+class BasicAuthConfiguration(BaseModel):
+    disable_basic: bool = False
     admin_password: Secret[str] | None = None
+
+    @model_validator(mode="after")
+    def validate_auth(self):
+        if self.disable_basic:
+            return self
+        if not self.admin_password:
+            raise ValueError("Admin password must be provided if basic authentication is enabled")
+        return self
+
+
+class AuthConfiguration(BaseModel):
     jwt_secret_key: Secret[str] | None = None
     disable_auth: bool = False
+    oidc: OidcConfiguration = Field(default_factory=OidcConfiguration)
+    basic: BasicAuthConfiguration = Field(default_factory=BasicAuthConfiguration)
+
+    @model_validator(mode="before")
+    @classmethod
+    def pre_validate_auth(cls, values: dict) -> dict:
+        disable_auth = values.get("disable_auth")
+        if isinstance(disable_auth, str):
+            disable_auth = disable_auth.lower() in ("true", "1", "yes")
+
+        if disable_auth:
+            logger.critical("Authentication is disabled! This is suitable only for local (desktop) deployment.")
+            values["jwt_secret_key"] = values.get("jwt_secret_key") or Secret("dummy-secret-key")
+            values["basic"] = {"disable_basic": True}
+            values["oidc"] = {"disable_oidc": True}
+
+        else:
+            basic = values.get("basic")
+            oidc = values.get("oidc")
+
+            basic_enabled = basic and str(basic.get("disable_basic", "false")).lower() not in ("true", "1", "yes")
+            oidc_enabled = oidc and str(oidc.get("disable_oidc", "false")).lower() not in ("true", "1", "yes")
+
+            # If only one is enabled, disable the other
+            if basic_enabled and not oidc:
+                values["oidc"] = {"disable_oidc": True}
+            elif oidc_enabled and not basic:
+                values["basic"] = {"disable_basic": True}
+            elif not basic and not oidc:
+                # If neither is provided, initialize both with defaults
+                values["basic"] = {}
+                values["oidc"] = {}
+        return values
 
     @model_validator(mode="after")
     def validate_auth(self):
         if self.disable_auth:
-            logger.critical("Authentication is disabled! This is suitable only for local (desktop) deployment.")
-            self.admin_password = self.admin_password or Secret("dummy-admin-password")
-            self.jwt_secret_key = self.jwt_secret_key or Secret("dummy-secret-key")
             return self
+        if self.basic.disable_basic and self.oidc.disable_oidc:
+            raise ValueError("If auth is enabled, either basic or oidc must be enabled")
         if not self.jwt_secret_key:
             raise ValueError("JWT secret key must be provided if authentication is enabled")
-        if not self.admin_password:
-            raise ValueError("Admin password must be provided if authentication is enabled")
         return self
 
 
