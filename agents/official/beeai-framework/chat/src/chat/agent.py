@@ -220,9 +220,9 @@ async def chat(
         [llm_conf] = llm_ext.data.llm_fulfillments.values()
 
     llm = OpenAIChatModel(
-        model_id=llm_conf.api_model if llm_conf else os.getenv("LLM_MODEL", "llama3.1"),
-        api_key=llm_conf.api_key if llm_conf else os.getenv("LLM_API_KEY", "dummy"),
-        base_url=llm_conf.api_base if llm_conf else os.getenv("LLM_API_BASE", "http://localhost:11434/v1"),
+        model_id=llm_conf.api_model if llm_conf else "llama3.1",
+        api_key=llm_conf.api_key if llm_conf else "dummy",
+        base_url=llm_conf.api_base if llm_conf else "http://localhost:11434/v1",
         parameters=ChatModelParameters(temperature=0.0),
         tool_choice_support=set(),
     )

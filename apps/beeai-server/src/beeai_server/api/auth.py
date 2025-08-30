@@ -15,6 +15,7 @@ from beeai_server.utils.utils import utc_now
 ROLE_PERMISSIONS: dict[UserRole, Permissions] = {
     UserRole.admin: Permissions.all(),
     UserRole.user: Permissions(
+        system_configuration={"read"},
         files={"*"},
         vector_stores={"*"},
         llm={"*"},
@@ -22,6 +23,7 @@ ROLE_PERMISSIONS: dict[UserRole, Permissions] = {
         a2a_proxy={"*"},
         feedback={"write"},
         providers={"read"},
+        model_providers={"read"},
         contexts={"*"},
         mcp_providers={"read"},
         mcp_tools={"read"},
@@ -30,6 +32,7 @@ ROLE_PERMISSIONS: dict[UserRole, Permissions] = {
 }
 ROLE_PERMISSIONS[UserRole.developer] = ROLE_PERMISSIONS[UserRole.user] | Permissions(
     providers={"read", "write"},  # TODO provider ownership
+    provider_variables={"read", "write"},
     mcp_providers={"read", "write"},
 )
 

@@ -223,6 +223,14 @@ run = "{{ mise_bin }} run beeai-server:dev:delete --vm-name=beeai-local-test"
 dir = "{{config_root}}/apps/beeai-server"
 run = "{{ mise_bin }} run beeai-platform:shell --vm-name=beeai-local-test"
 
+["beeai-server:dev:test:connect"]
+dir = "{{config_root}}/apps/beeai-server"
+run = "{{ mise_bin }} run beeai-server:dev:connect --vm-name=beeai-local-test"
+
+["beeai-server:dev:test:disconnect"]
+dir = "{{config_root}}/apps/beeai-server"
+run = "{{ mise_bin }} run beeai-server:dev:disconnect --vm-name=beeai-local-test"
+
 ["beeai-server:dev:test:reconnect"]
 dir = "{{config_root}}/apps/beeai-server"
 run = "{{ mise_bin }} run beeai-server:dev:reconnect --vm-name=beeai-local-test"

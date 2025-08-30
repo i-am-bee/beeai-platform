@@ -81,15 +81,11 @@ class KubernetesProviderDeploymentManager(IProviderDeploymentManager):
             return UUID(provider_id)
         raise ValueError(f"Invalid provider name format: {name}")
 
-    def _get_env_for_provider(self, provider: Provider, env: dict[str, str | None]):
-        return {**provider.extract_env(env), **global_provider_variables()}
-
     async def create_or_replace(self, *, provider: Provider, env: dict[str, str] | None = None) -> bool:
         if not provider.managed:
             raise ValueError("Attempted to update provider not managed by Kubernetes")
 
         async with self.api() as api:
-            env = env or {}
             label = self._get_k8s_name(provider.id)
 
             service = Service(
@@ -100,7 +96,7 @@ class KubernetesProviderDeploymentManager(IProviderDeploymentManager):
                 ),
                 api=api,
             )
-            env = self._get_env_for_provider(provider, env)
+            env = {**(env or {}), **global_provider_variables()}
             secret = Secret(
                 await self._render_template(
                     TemplateKind.secret,

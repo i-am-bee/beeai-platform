@@ -221,7 +221,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/api/v1/llm/chat/completions': {
+  '/api/v1/openai/chat/completions': {
     parameters: {
       query?: never;
       header?: never;
@@ -238,7 +238,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/api/v1/llm/embeddings': {
+  '/api/v1/openai/embeddings': {
     parameters: {
       query?: never;
       header?: never;

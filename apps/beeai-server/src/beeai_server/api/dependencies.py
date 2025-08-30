@@ -16,10 +16,11 @@ from beeai_server.configuration import Configuration
 from beeai_server.domain.models.permissions import AuthorizedUser, Permissions
 from beeai_server.domain.models.user import User, UserRole
 from beeai_server.service_layer.services.a2a import A2AProxyService
+from beeai_server.service_layer.services.configurations import ConfigurationService
 from beeai_server.service_layer.services.contexts import ContextService
-from beeai_server.service_layer.services.env import EnvService
 from beeai_server.service_layer.services.files import FileService
 from beeai_server.service_layer.services.mcp import McpService
+from beeai_server.service_layer.services.model_provider import ModelProviderService
 from beeai_server.service_layer.services.provider import ProviderService
 from beeai_server.service_layer.services.user_feedback import UserFeedbackService
 from beeai_server.service_layer.services.users import UserService
@@ -30,11 +31,12 @@ ProviderServiceDependency = Annotated[ProviderService, Depends(lambda: di[Provid
 A2AProxyServiceDependency = Annotated[A2AProxyService, Depends(lambda: di[A2AProxyService])]
 McpServiceDependency = Annotated[McpService, Depends(lambda: di[McpService])]
 ContextServiceDependency = Annotated[ContextService, Depends(lambda: di[ContextService])]
-EnvServiceDependency = Annotated[EnvService, Depends(lambda: di[EnvService])]
+ConfigurationServiceDependency = Annotated[ConfigurationService, Depends(lambda: di[ConfigurationService])]
 FileServiceDependency = Annotated[FileService, Depends(lambda: di[FileService])]
 UserServiceDependency = Annotated[UserService, Depends(lambda: di[UserService])]
 VectorStoreServiceDependency = Annotated[VectorStoreService, Depends(lambda: di[VectorStoreService])]
 UserFeedbackServiceDependency = Annotated[UserFeedbackService, Depends(lambda: di[UserFeedbackService])]
+ModelProviderServiceDependency = Annotated[ModelProviderService, Depends(lambda: di[ModelProviderService])]
 
 logger = logging.getLogger(__name__)
 
@@ -60,7 +62,6 @@ async def authorized_user(
                 context_permissions=parsed_token.context_permissions,
                 token_context_id=parsed_token.context_id,
             )
-            logger.info("Token is valid!")
             return token
         except PyJWTError:
             if not configuration.auth.disable_auth:
@@ -69,7 +70,7 @@ async def authorized_user(
             logger.warning("Bearer token is invalid, agent is not probably not using llm extension correctly")
 
     if configuration.auth.disable_auth or (
-        basic_auth and basic_auth.password == configuration.auth.admin_password.get_secret_value()
+        basic_auth and basic_auth.password == configuration.auth.admin_password.get_secret_value()  # pyright: ignore [reportOptionalMemberAccess]
     ):
         user = await user_service.get_user_by_email("admin@beeai.dev")
         return AuthorizedUser(

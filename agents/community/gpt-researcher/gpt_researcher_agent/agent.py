@@ -78,13 +78,13 @@ async def gpt_researcher(
     if embedding_ext and embedding_ext.data:
         [embedding_conf] = embedding_ext.data.embedding_fulfillments.values()
 
-    model = llm_conf.api_model if llm_conf else os.getenv("LLM_MODEL", "dummy")
-    embedding_model = embedding_conf.api_model if embedding_conf else os.getenv("EMBEDDING_MODEL", "dummy")
+    model = llm_conf.api_model if llm_conf else "dummy"
+    embedding_model = embedding_conf.api_model if embedding_conf else "dummy"
 
     env = {
         "RETRIEVER": "duckduckgo",
-        "OPENAI_BASE_URL": llm_conf.api_base if llm_conf else os.getenv("LLM_API_BASE", "http://localhost:11434/v1"),
-        "OPENAI_API_KEY": llm_conf.api_key if llm_conf else os.getenv("LLM_API_KEY", "dummy"),
+        "OPENAI_BASE_URL": llm_conf.api_base if llm_conf else "http://localhost:11434/v1",
+        "OPENAI_API_KEY": llm_conf.api_key if llm_conf else "dummy",
         "LLM_MODEL": model,
         "EMBEDDING": f"openai:{embedding_model}",
         "FAST_LLM": f"openai:{model}",

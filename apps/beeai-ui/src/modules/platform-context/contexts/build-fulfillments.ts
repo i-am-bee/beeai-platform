@@ -20,7 +20,7 @@ export const buildFullfilments = (platformToken: string): Fulfillments => {
         (memo, demandKey) => {
           memo.llm_fulfillments[demandKey] = {
             identifier: 'llm_proxy',
-            api_base: '{platform_url}/api/v1/llm/',
+            api_base: '{platform_url}/api/v1/openai/',
             api_key: platformToken,
             api_model: 'dummy',
           };

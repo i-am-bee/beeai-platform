@@ -16,6 +16,7 @@ from beeai_server.api.dependencies import (
 )
 from beeai_server.api.routes.a2a import proxy_request
 from beeai_server.api.schema.common import PaginatedResponse
+from beeai_server.api.schema.env import ListVariablesSchema, UpdateVariablesRequest
 from beeai_server.api.schema.provider import CreateProviderRequest
 from beeai_server.domain.models.permissions import AuthorizedUser
 from beeai_server.domain.models.provider import ProviderWithState
@@ -35,7 +36,10 @@ async def create_provider(
     if auto_remove and not configuration.provider.auto_remove_enabled:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Auto remove functionality is disabled")
     return await provider_service.create_provider(
-        location=request.location, agent_card=request.agent_card, auto_remove=auto_remove
+        location=request.location,
+        agent_card=request.agent_card,
+        auto_remove=auto_remove,
+        variables=request.variables,
     )
 
 
@@ -89,3 +93,22 @@ async def stream_logs(
 ) -> StreamingResponse:
     logs_iterator = await provider_service.stream_logs(provider_id=id)
     return streaming_response(logs_iterator())
+
+
+@router.put("/{id}/variables", status_code=fastapi.status.HTTP_201_CREATED)
+async def update_provider_variables(
+    id: UUID,
+    request: UpdateVariablesRequest,
+    provider_service: ProviderServiceDependency,
+    _: Annotated[AuthorizedUser, Depends(RequiresPermissions(provider_variables={"write"}))],
+) -> None:
+    await provider_service.update_provider_env(provider_id=id, env=request.variables)
+
+
+@router.get("/{id}/variables")
+async def list_provider_variables(
+    id: UUID,
+    provider_service: ProviderServiceDependency,
+    _: Annotated[AuthorizedUser, Depends(RequiresPermissions(provider_variables={"read"}))],
+) -> ListVariablesSchema:
+    return ListVariablesSchema(variables=await provider_service.list_provider_env(provider_id=id))
