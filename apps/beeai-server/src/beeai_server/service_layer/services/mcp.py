@@ -12,7 +12,7 @@ import fastapi
 import httpx
 from kink import inject
 
-from beeai_server.api.schema.mcp import McpProvider, Tool, Toolkit
+from beeai_server.api.schema.mcp import McpProvider, Resource, Tool, Toolkit
 from beeai_server.configuration import Configuration
 from beeai_server.domain.models.mcp_provider import (
     McpProviderDeploymentState,
@@ -99,6 +99,19 @@ class McpService:
                 if err.response.status_code == fastapi.status.HTTP_404_NOT_FOUND:
                     raise EntityNotFoundError("mcp_provider", provider_id) from err
                 raise
+
+    # Resources
+
+    async def list_resources(self) -> list[Resource]:
+        async with self.gateway_context() as client:
+            response = await client.get("/resources")
+            resources: list[dict] = response.raise_for_status().json()
+            return [self._to_resource(resource) for resource in resources]
+
+    async def read_resource(self, *, resource_id: str) -> Resource:
+        async with self.gateway_context() as client:
+            response = await client.get(f"/resources/{resource_id}")
+            return self._to_resource(response.raise_for_status().json())
 
     # Tools
 
@@ -212,6 +225,16 @@ class McpService:
                 return "SSE"
             case McpProviderTransport.STREAMABLE_HTTP:
                 return "STREAMABLEHTTP"
+
+    def _to_resource(self, resource: dict) -> Resource:
+        return Resource(
+            id=str(resource["id"]),
+            uri=resource["uri"],
+            name=resource["name"],
+            description=resource["description"],
+            mime_type=resource["mime_type"],
+            size=resource["size"],
+        )
 
     def _to_tool(self, tool: dict) -> Tool:
         return Tool(id=tool["id"], name=tool["name"], description=tool["description"])

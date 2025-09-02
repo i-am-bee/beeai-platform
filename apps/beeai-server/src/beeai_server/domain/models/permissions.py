@@ -33,6 +33,7 @@ class Permissions(BaseModel):
     variables: SerializeAsAny[set[Literal["read", "write", "*"]]] = set()
     contexts: SerializeAsAny[set[Literal["read", "write", "*"]]] = set()
     mcp_providers: SerializeAsAny[set[Literal["read", "write", "*"]]] = set()
+    mcp_resources: SerializeAsAny[set[Literal["read", "*"]]] = set()
     mcp_tools: SerializeAsAny[set[Literal["read", "*"]]] = set()
     mcp_proxy: SerializeAsAny[set[Literal["*"]]] = set()
 
