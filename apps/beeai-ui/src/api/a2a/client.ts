@@ -180,7 +180,8 @@ export const buildA2AClient = <UIGenericPart = never>({
                   taskId,
                   url: oauth.authorization_endpoint_url,
                 });
-                return;
+              } else {
+                throw new Error(`Illegal State - oauth extension data missing on auth-required event`);
               }
             }
 
