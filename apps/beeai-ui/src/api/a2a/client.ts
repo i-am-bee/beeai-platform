@@ -138,8 +138,6 @@ export const buildA2AClient = <UIGenericPart = never>({
         };
       }
 
-      console.log({ metadata }, 'tonik');
-
       const stream = client.sendMessageStream({
         message: createUserMessage({ message, contextId, metadata, taskId }),
       });
