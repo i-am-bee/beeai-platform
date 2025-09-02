@@ -6,6 +6,7 @@
 'use client';
 import { type PropsWithChildren, useCallback, useMemo, useRef, useState } from 'react';
 import { v4 as uuid } from 'uuid';
+import { z } from 'zod';
 
 import { buildA2AClient } from '#api/a2a/client.ts';
 import { type ChatRun, RunResultType } from '#api/a2a/types.ts';
@@ -39,7 +40,7 @@ interface Props {
 
 export function AgentRunProviders({ agent, children }: PropsWithChildren<Props>) {
   return (
-    <PlatformContextProvider>
+    <PlatformContextProvider agent={agent}>
       <FileUploadProvider allowedContentTypes={agent.defaultInputModes}>
         <AgentRunProvider agent={agent}>{children}</AgentRunProvider>
       </FileUploadProvider>
@@ -180,6 +181,11 @@ function AgentRunProvider({ agent, children }: PropsWithChildren<Props>) {
             message.status = UIMessageStatus.InputRequired;
             message.parts.push({ kind: UIMessagePartKind.Form, ...result.form });
           });
+        } else if (result && result.type === RunResultType.AuthRequired) {
+          updateCurrentAgentMessage((message) => {
+            message.status = UIMessageStatus.InputRequired;
+            message.parts.push({ kind: UIMessagePartKind.Auth, url: result.url, taskId: result.taskId });
+          });
         } else {
           updateCurrentAgentMessage((message) => {
             message.status = UIMessageStatus.Completed;
@@ -240,6 +246,46 @@ function AgentRunProvider({ agent, children }: PropsWithChildren<Props>) {
     [checkPendingRun, run],
   );
 
+  const startAuth = useCallback(
+    (url: string, taskId: TaskId) => {
+      const authMessageSchema = z.object({
+        data: z.object({
+          redirect_uri: z.string(),
+        }),
+      });
+
+      const popup = window.open(url);
+      if (!popup) {
+        throw new Error('Failed to open popup');
+      }
+      popup.focus();
+
+      async function handler(message: unknown) {
+        const { success, data: parsedMessage } = authMessageSchema.safeParse(message);
+        if (!success) {
+          return;
+        }
+
+        if (popup) {
+          window.removeEventListener('message', handler);
+          popup.close();
+
+          const userMessage: UIUserMessage = {
+            id: uuid(),
+            role: Role.User,
+            parts: [],
+            auth: parsedMessage.data.redirect_uri,
+          };
+
+          await run(userMessage, taskId);
+        }
+      }
+
+      window.addEventListener('message', handler);
+    },
+    [run],
+  );
+
   const sources = useMemo(() => getMessagesSourcesMap(messages), [messages]);
 
   const lastAgentMessage = getMessages().findLast(isAgentMessage);
@@ -268,10 +314,11 @@ function AgentRunProvider({ agent, children }: PropsWithChildren<Props>) {
       stats,
       chat,
       submitForm,
+      startAuth,
       cancel,
       clear,
     };
-  }, [agent, status, input, stats, chat, submitForm, cancel, clear]);
+  }, [agent, status, input, stats, chat, submitForm, cancel, clear, startAuth]);
 
   return (
     <AgentStatusProvider agent={agent} isMonitorStatusEnabled>

@@ -17,6 +17,7 @@ import { dispatchInputEventOnTextarea, submitFormOnEnter } from '#utils/form-uti
 import { ChatDefaultTools } from '../chat/constants';
 import { useAgentRun } from '../contexts/agent-run';
 import type { RunRunFormValues } from '../types';
+import { MCPConfig } from './MCPConfig';
 import { PromptExamples } from './PromptExamples';
 import { RunFiles } from './RunFiles';
 import classes from './RunInput.module.scss';
@@ -109,6 +110,7 @@ export function RunInput({ promptExamples, onSubmit }: Props) {
         }}
       >
         <RunFiles />
+        <MCPConfig />
 
         <TextAreaAutoHeight
           rows={1}
