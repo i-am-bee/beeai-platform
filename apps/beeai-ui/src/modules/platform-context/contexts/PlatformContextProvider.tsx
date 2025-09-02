@@ -19,15 +19,19 @@ const mcpExtensionExtractor = extractServiceExtensionDemands(mcpExtension);
 
 export function PlatformContextProvider({ children, agent }: PropsWithChildren<{ agent: Agent | null }>) {
   const mcpDemands = mcpExtensionExtractor(agent?.capabilities.extensions ?? []);
+
   const { featureFlags } = useApp();
   const [contextId, setContextId] = useState<string | null>(null);
   const { mutateAsync: createContext } = useCreateContext();
   const { mutateAsync: createContextToken } = useCreateContextToken();
   const [selectedMCPServers, setSelectedMCPServers] = useState<Record<string, string>>(
-    Object.keys(mcpDemands?.mcp_demands ?? {}).reduce((memo, value) => {
-      memo[value] = '';
-      return memo;
-    }, {}),
+    Object.keys(mcpDemands?.mcp_demands ?? {}).reduce(
+      (memo, value) => ({
+        ...memo,
+        [value]: '',
+      }),
+      {},
+    ),
   );
 
   const setContext = useCallback(
