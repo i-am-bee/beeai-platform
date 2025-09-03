@@ -29,6 +29,8 @@ from beeai_sdk.server.agent import Agent
 from beeai_sdk.server.agent import agent as agent_decorator
 from beeai_sdk.server.logging import configure_logger as configure_logger_func
 from beeai_sdk.server.logging import logger
+from beeai_sdk.server.store.context_store import ContextStore
+from beeai_sdk.server.store.memory_context_store import InMemoryContextStore
 from beeai_sdk.server.telemetry import configure_telemetry as configure_telemetry_func
 from beeai_sdk.server.utils import cancel_task
 
@@ -37,6 +39,7 @@ class Server:
     def __init__(self) -> None:
         self._agent: Agent | None = None
         self.server: uvicorn.Server | None = None
+        self._context_store: ContextStore | None = None
         self._self_registration_client_factory: Callable[[], httpx.AsyncClient] | None = None
 
     @functools.wraps(agent_decorator)
@@ -58,6 +61,7 @@ class Server:
         configure_telemetry: bool = False,
         self_registration: bool = True,
         task_store: TaskStore | None = None,
+        context_store: ContextStore | None = None,
         queue_manager: QueueManager | None = None,
         push_config_store: PushNotificationConfigStore | None = None,
         push_sender: PushNotificationSender | None = None,
@@ -140,12 +144,15 @@ class Server:
                 if register_task:
                     await cancel_task(register_task)
 
+        context_store = context_store or InMemoryContextStore()
+
         self._agent.card.url = f"http://{host}:{port}"
 
         app = create_app(
             self._agent,
             lifespan=_lifespan_fn,
             task_store=task_store,
+            context_store=context_store,
             queue_manager=queue_manager,
             push_config_store=push_config_store,
             push_sender=push_sender,

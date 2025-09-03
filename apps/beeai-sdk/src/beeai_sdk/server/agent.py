@@ -38,10 +38,13 @@ from beeai_sdk.a2a.types import ArtifactChunk, Metadata, RunYield, RunYieldResum
 from beeai_sdk.server.context import RunContext
 from beeai_sdk.server.dependencies import extract_dependencies
 from beeai_sdk.server.logging import logger
+from beeai_sdk.server.store.context_store import ContextStore
 from beeai_sdk.server.utils import cancel_task
 
 AgentFunction: TypeAlias = Callable[[], AsyncGenerator[RunYield, RunYieldResume]]
-AgentFunctionFactory: TypeAlias = Callable[[TaskUpdater, RequestContext], AbstractAsyncContextManager[AgentFunction]]
+AgentFunctionFactory: TypeAlias = Callable[
+    [TaskUpdater, RequestContext, ContextStore], AbstractAsyncContextManager[AgentFunction]
+]
 
 
 class Agent(NamedTuple):
@@ -190,15 +193,21 @@ def agent(
             async def execute_fn(_ctx: RunContext, *args, **kwargs) -> None:
                 await asyncio.to_thread(_execute_fn_sync, _ctx, *args, **kwargs)
 
+        from beeai_sdk.server.store.context_store import ContextStore
+
         @asynccontextmanager
         async def agent_executor_lifespan(
-            task_updater: TaskUpdater, request_context: RequestContext
+            task_updater: TaskUpdater, request_context: RequestContext, context_store: ContextStore
         ) -> AsyncIterator[AgentFunction]:
             message = request_context.message
             assert message  # this is only executed in the context of SendMessage request
             # These are incorrectly typed in a2a
             assert request_context.task_id
             assert request_context.context_id
+            context_store_instance, extra_deps = await context_store.create(
+                context_id=request_context.context_id,
+                dependencies=list(dependencies.values()),
+            )
             context = RunContext(
                 configuration=request_context.configuration,
                 context_id=request_context.context_id,
@@ -207,6 +216,7 @@ def agent(
                 current_task=request_context.current_task,
                 related_tasks=request_context.related_tasks,
                 call_context=request_context.call_context,
+                store=context_store_instance,
             )
 
             # initialize dependencies
@@ -215,6 +225,8 @@ def agent(
                 for pname, depends in dependencies.items():
                     # call dependencies with the first message and initialize their lifespan
                     dependency_args[pname] = await stack.enter_async_context(depends(message, context, dependency_args))
+                for extra_dep in extra_deps:
+                    await stack.enter_async_context(extra_dep(message, context, dependency_args))
 
                 async def agent_generator():
                     yield_queue = context._yield_queue
@@ -251,11 +263,14 @@ def agent(
 
 
 class Executor(AgentExecutor):
-    def __init__(self, execute_fn: AgentFunctionFactory, queue_manager: QueueManager) -> None:
+    def __init__(
+        self, execute_fn: AgentFunctionFactory, queue_manager: QueueManager, context_store: ContextStore
+    ) -> None:
         self._agent_executor_span = execute_fn
         self._queue_manager = queue_manager
         self._running_tasks: dict[str, asyncio.Task] = {}
         self._cancel_queues: dict[str, EventQueue] = {}
+        self._context_store: ContextStore
 
     async def _watch_for_cancellation(self, task_id: str, task: asyncio.Task) -> None:
         cancel_queue = await self._queue_manager.create_or_tap(f"_cancel_{task_id}")
@@ -273,6 +288,7 @@ class Executor(AgentExecutor):
         self,
         *,
         context: RequestContext,
+        context_store: ContextStore,
         task_updater: TaskUpdater,
         resume_queue: EventQueue,
     ) -> None:
@@ -293,7 +309,7 @@ class Executor(AgentExecutor):
                 deep=True, update={"context_id": task_updater.context_id, "task_id": task_updater.task_id}
             )
 
-        async with self._agent_executor_span(task_updater, context) as execute_fn:
+        async with self._agent_executor_span(task_updater, context, context_store) as execute_fn:
             agent_generator_fn = execute_fn()
 
             try:
@@ -430,7 +446,10 @@ class Executor(AgentExecutor):
             else:
                 task_updater = TaskUpdater(long_running_event_queue, context.task_id, context.context_id)
                 run_generator = self._run_agent_function(
-                    context=context, task_updater=task_updater, resume_queue=resume_queue
+                    context=context,
+                    context_store=self._context_store,
+                    task_updater=task_updater,
+                    resume_queue=resume_queue,
                 )
                 self._running_tasks[context.task_id] = asyncio.create_task(run_generator)
                 self._running_tasks[context.task_id].add_done_callback(

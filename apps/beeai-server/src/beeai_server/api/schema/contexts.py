@@ -17,6 +17,7 @@ class ContextCreateRequest(BaseModel):
 class ContextPermissionsGrant(BaseModel):
     files: list[Literal["read", "write", "extract", "*"]] = []
     vector_stores: list[Literal["read", "write", "extract", "*"]] = []
+    context_data: list[Literal["read", "write", "*"]] = []
 
 
 class GlobalPermissionGrant(BaseModel):
@@ -29,6 +30,7 @@ class GlobalPermissionGrant(BaseModel):
     providers: list[Literal["read", "write", "*"]] = []  # write includes "show logs" permission
     variables: list[Literal["read", "write", "*"]] = []
     contexts: list[Literal["read", "write", "*"]] = []
+    context_data: list[Literal["read", "write", "*"]] = []
 
 
 class ContextTokenCreateRequest(BaseModel):

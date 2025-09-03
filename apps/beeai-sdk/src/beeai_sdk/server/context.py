@@ -1,6 +1,7 @@
 # Copyright 2025 © BeeAI a Series of LF Projects, LLC
 # SPDX-License-Identifier: Apache-2.0
 
+
 import janus
 from a2a.server.context import ServerCallContext
 from a2a.server.tasks import TaskUpdater
@@ -8,6 +9,7 @@ from a2a.types import MessageSendConfiguration, Task
 from pydantic import BaseModel, PrivateAttr
 
 from beeai_sdk.a2a.types import RunYield, RunYieldResume
+from beeai_sdk.server.store.context_store import ContextStoreInstance
 
 
 class RunContext(BaseModel, arbitrary_types_allowed=True):
@@ -18,6 +20,7 @@ class RunContext(BaseModel, arbitrary_types_allowed=True):
     current_task: Task | None = None
     related_tasks: list[Task] | None = None
     call_context: ServerCallContext | None = None
+    store: ContextStoreInstance
 
     _yield_queue: janus.Queue[RunYield] = PrivateAttr(default_factory=janus.Queue)
     _yield_resume_queue: janus.Queue[RunYieldResume] = PrivateAttr(default_factory=janus.Queue)

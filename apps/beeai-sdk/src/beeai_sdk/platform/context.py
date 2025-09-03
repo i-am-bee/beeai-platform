@@ -6,9 +6,12 @@ from __future__ import annotations
 from typing import Literal
 
 import pydantic
+from a2a.types import Artifact, Message
 
 from beeai_sdk.platform.client import PlatformClient, get_platform_client
 from beeai_sdk.platform.types import Metadata
+
+type ContextHistoryItem = Artifact | Message
 
 
 class ContextToken(pydantic.BaseModel):
@@ -24,6 +27,7 @@ class ResourceIdPermission(pydantic.BaseModel):
 class ContextPermissions(pydantic.BaseModel):
     files: set[Literal["read", "write", "extract", "*"]] = set()
     vector_stores: set[Literal["read", "write", "extract", "*"]] = set()
+    context_data: set[Literal["read", "write", "*"]] = set()
 
 
 class Permissions(ContextPermissions):
@@ -108,3 +112,43 @@ class Context(pydantic.BaseModel):
                 .json()
             )
         return pydantic.TypeAdapter(ContextToken).validate_python({**token_response, "context_id": context_id})
+
+    async def add_history_item(
+        self: Context | str,
+        *,
+        history_item: ContextHistoryItem,
+        client: PlatformClient | None = None,
+        context_id: str | None | Literal["auto"] = "auto",
+    ) -> None:
+        """Add a Message or Artifact to the context history (append-only)"""
+        target_context_id = self if isinstance(self, str) else self.id
+        async with client or get_platform_client() as platform_client:
+            resolved_context_id = platform_client.context_id if context_id == "auto" else context_id
+            _ = (
+                await platform_client.post(
+                    url=f"/api/v1/contexts/{target_context_id}/history",
+                    json=history_item.model_dump(),
+                    params=resolved_context_id and {"context_id": resolved_context_id},
+                )
+            ).raise_for_status()
+
+    async def list_history(
+        self: Context | str,
+        *,
+        client: PlatformClient | None = None,
+        context_id: str | None | Literal["auto"] = "auto",
+    ) -> list[ContextHistoryItem]:
+        """List all history items for this context in chronological order"""
+        target_context_id = self if isinstance(self, str) else self.id
+        async with client or get_platform_client() as platform_client:
+            resolved_context_id = platform_client.context_id if context_id == "auto" else context_id
+            response = (
+                await platform_client.get(
+                    url=f"/api/v1/contexts/{target_context_id}/history",
+                    params=resolved_context_id and {"context_id": resolved_context_id},
+                )
+            ).raise_for_status()
+
+            data = response.json()
+            adapter = pydantic.TypeAdapter(list[ContextHistoryItem])
+            return adapter.validate_python(data["items"])

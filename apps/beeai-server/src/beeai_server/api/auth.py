@@ -23,6 +23,7 @@ ROLE_PERMISSIONS: dict[UserRole, Permissions] = {
         feedback={"write"},
         providers={"read"},
         contexts={"*"},
+        context_data={"*"},
         mcp_providers={"read"},
         mcp_tools={"read"},
         mcp_proxy={"*"},
