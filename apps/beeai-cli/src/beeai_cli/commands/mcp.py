@@ -91,7 +91,7 @@ async def list_resources() -> None:
     ) as table:
         for resource in resources:
             table.add_row(
-                resource["name"], resource["description"], resource["type"], resource["size"], resource["uri"]
+                resource["name"], resource["description"], resource["mime_type"], resource["size"], resource["uri"]
             )
     console.print()
     console.print(table)

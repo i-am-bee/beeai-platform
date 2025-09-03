@@ -106,12 +106,12 @@ class McpService:
         async with self.gateway_context() as client:
             response = await client.get("/resources")
             resources: list[dict] = response.raise_for_status().json()
-            return [self._to_resource(resource) for resource in resources]
+            return [Resource.model_validate(resource) for resource in resources]
 
     async def read_resource(self, *, resource_id: str) -> Resource:
         async with self.gateway_context() as client:
             response = await client.get(f"/resources/{resource_id}")
-            return self._to_resource(response.raise_for_status().json())
+            return Resource.model_validate(response.raise_for_status().json())
 
     # Tools
 
@@ -119,12 +119,12 @@ class McpService:
         async with self.gateway_context() as client:
             response = await client.get("/tools")
             tools: list[dict] = response.raise_for_status().json()
-            return [self._to_tool(tool) for tool in tools]
+            return [Tool.model_validate(tool) for tool in tools]
 
     async def read_tool(self, *, tool_id: str) -> Tool:
         async with self.gateway_context() as client:
             response = await client.get(f"/tools/{tool_id}")
-            return self._to_tool(response.raise_for_status().json())
+            return Tool.model_validate(response.raise_for_status().json())
 
     # Toolkits
 
@@ -225,19 +225,6 @@ class McpService:
                 return "SSE"
             case McpProviderTransport.STREAMABLE_HTTP:
                 return "STREAMABLEHTTP"
-
-    def _to_resource(self, resource: dict) -> Resource:
-        return Resource(
-            id=str(resource["id"]),
-            uri=resource["uri"],
-            name=resource["name"],
-            description=resource["description"],
-            mime_type=resource["mime_type"],
-            size=resource["size"],
-        )
-
-    def _to_tool(self, tool: dict) -> Tool:
-        return Tool(id=tool["id"], name=tool["name"], description=tool["description"])
 
     @asynccontextmanager
     async def gateway_context(self) -> AsyncGenerator[httpx.AsyncClient]:

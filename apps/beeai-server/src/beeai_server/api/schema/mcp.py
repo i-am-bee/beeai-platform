@@ -27,7 +27,7 @@ class McpProvider(BaseModel):
 
 
 class Resource(BaseModel):
-    id: str
+    id: int
     uri: str
     name: str
     description: str | None = None
