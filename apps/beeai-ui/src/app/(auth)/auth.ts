@@ -85,6 +85,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   },
   session: { strategy: 'jwt' },
   trustHost: true,
+  // Prevents nextauth errors when authentication is disabled and NEXTAUTH_SECRET is not provided
   secret: OIDC_ENABLED ? process.env.NEXTAUTH_SECRET : 'dummy_secret',
   useSecureCookies: true,
   jwt: {
