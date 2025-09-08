@@ -13,11 +13,10 @@ import { QueryProvider } from '#contexts/QueryProvider/QueryProvider.tsx';
 import { ThemeProvider } from '#contexts/Theme/ThemeProvider.tsx';
 import { ToastProvider } from '#contexts/Toast/ToastProvider.tsx';
 import { RouteTransitionProvider } from '#contexts/TransitionContext/RouteTransitionProvider.tsx';
-import { AUTH_BASEPATH } from '#utils/constants.ts';
 
 export default function Providers({ children }: PropsWithChildren) {
   return (
-    <SessionProvider basePath={AUTH_BASEPATH}>
+    <SessionProvider>
       <ToastProvider>
         <QueryProvider>
           <ProgressBarProvider>

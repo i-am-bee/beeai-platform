@@ -8,10 +8,10 @@ import type { JWT, JWTDecodeParams, JWTEncodeParams } from 'next-auth/jwt';
 import type { Provider } from 'next-auth/providers';
 
 import { ProviderList } from '#app/api/auth/providers/providers.ts';
-import { AUTH_BASEPATH, OIDC_ENABLED } from '#utils/constants.ts';
+import { OIDC_ENABLED } from '#utils/constants.ts';
 
 import type { ProviderConfig } from './types';
-import { internalDecode } from './utils';
+import { verifyJWTToken } from './utils';
 
 let providersConfig: ProviderConfig[] = [];
 
@@ -30,8 +30,7 @@ if (OIDC_ENABLED) {
       provider.JWKS = JWKS;
     }
   } catch (err) {
-    console.warn('Unable to parse providers from OIDC_PROVIDERS environment variable.');
-    console.error(err);
+    console.error('Unable to parse providers from OIDC_PROVIDERS environment variable.', err);
   }
 
   const providerList = new ProviderList();
@@ -84,10 +83,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   pages: {
     signIn: '/signin',
   },
-  basePath: AUTH_BASEPATH,
   session: { strategy: 'jwt' },
   trustHost: true,
-  secret: process.env.NEXTAUTH_SECRET,
+  secret: OIDC_ENABLED ? process.env.NEXTAUTH_SECRET : 'dummy_secret',
   useSecureCookies: true,
   jwt: {
     async encode(params: JWTEncodeParams<JWT>): Promise<string> {
@@ -97,7 +95,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     async decode(params: JWTDecodeParams): Promise<JWT | null> {
       // return a `JWT` object, or `null` if decoding failed
       // const jwt = { access_token: params.token || '' };
-      const jwt = await internalDecode(params, providersConfig);
+      const jwt = await verifyJWTToken(params, providersConfig);
 
       return jwt;
     },

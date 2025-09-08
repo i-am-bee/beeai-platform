@@ -12,15 +12,15 @@ import type { ProviderConfig } from './types';
 
 /**
  * Asynchronously decodes a JWT using a list of providers.
- * This function attempts to verify the JWT against each provider's JWKS (JSON Web Key Set) URL.
- * It will retry up to a certain count if verification fails.
+ * This function attempts to verify the JWT against each configured provider's JWKS (JSON Web Key Set) in sequence.
  *
  * @param {JWTDecodeParams} params - The parameters for JWT decoding.
- * @returns {Promise<JWT | null>} - A Promise that resolves to the decoded JWT object or null if decoding fails.
+ * @param {ProviderConfig[]} providersConfig - The list of OIDC provider configurations.
+ * @returns {Promise<JWT | null>} - A Promise that resolves to the decoded JWT object or null if decoding fails for all providers.
  */
-export async function internalDecode(params: JWTDecodeParams, providersConfig: ProviderConfig[]): Promise<JWT | null> {
+export async function verifyJWTToken(params: JWTDecodeParams, providersConfig: ProviderConfig[]): Promise<JWT | null> {
   let jwt: JWT | null = null;
-  let retryCount = 0;
+  let verificationAttempts = 0;
 
   for (const provider of providersConfig) {
     try {
@@ -33,12 +33,12 @@ export async function internalDecode(params: JWTDecodeParams, providersConfig: P
       break;
     } catch (error) {
       if (error) {
-        retryCount += 1;
+        verificationAttempts += 1;
       }
     }
   }
   if (jwt === null) {
-    console.warn(`Unable to verify jwt, retries: ${retryCount}`);
+    console.warn(`Unable to verify jwt after trying ${verificationAttempts} providers.`);
   }
   return jwt;
 }

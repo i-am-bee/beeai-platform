@@ -6,7 +6,7 @@
 import { SignIn } from '#modules/auth/Signin.tsx';
 
 interface PageProps {
-  searchParams: Record<string, string | string[] | undefined>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
 export default async function SignInPage({ searchParams }: PageProps) {
