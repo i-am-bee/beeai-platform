@@ -3,6 +3,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-.button {
+button.button {
   border: 1px solid $border-subtle;
+
+  &.avatar {
+    border-radius: 50%;
+  }
 }

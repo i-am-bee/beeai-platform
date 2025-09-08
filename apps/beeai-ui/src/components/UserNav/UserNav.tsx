@@ -5,7 +5,10 @@
 
 import { Launch, LogoGithub, Settings } from '@carbon/icons-react';
 import { OverflowMenu, OverflowMenuItem } from '@carbon/react';
+import clsx from 'clsx';
 
+import UserAvatar from '#components/UserAvatar/UserAvatar.tsx';
+import { useApp } from '#contexts/App/index.ts';
 import { useRouteTransition } from '#contexts/TransitionContext/index.ts';
 import { DOCUMENTATION_LINK, GET_SUPPORT_LINK } from '#utils/constants.ts';
 import { routes } from '#utils/router.ts';
@@ -14,14 +17,15 @@ import classes from './UserNav.module.scss';
 
 export function UserNav() {
   const { transitionTo } = useRouteTransition();
+  const { isAuthEnabled } = useApp();
 
   return (
     <OverflowMenu
-      renderIcon={Settings}
+      renderIcon={isAuthEnabled ? UserAvatar : Settings}
       size="sm"
       aria-label="User navigation"
       direction="top"
-      className={classes.button}
+      className={clsx(classes.button, { [classes.avatar]: isAuthEnabled })}
     >
       {NAV_ITEMS.map(({ hasDivider, itemText, icon: Icon, isInternal, href, ...props }, idx) => {
         return (

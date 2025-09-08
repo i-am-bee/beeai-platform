@@ -1,0 +1,159 @@
+/**
+ * Copyright 2025 © BeeAI a Series of LF Projects, LLC
+ * SPDX-License-Identifier: Apache-2.0
+ */
+import * as jose from 'jose';
+import NextAuth, { type DefaultSession } from 'next-auth';
+import type { JWT, JWTDecodeParams, JWTEncodeParams } from 'next-auth/jwt';
+import type { Provider } from 'next-auth/providers';
+
+import { ProviderList } from '#app/api/auth/providers/providers.ts';
+import { AUTH_BASEPATH, OIDC_ENABLED } from '#utils/constants.ts';
+
+import type { ProviderConfig } from './types';
+import { internalDecode } from './utils';
+
+let providersConfig: ProviderConfig[] = [];
+
+const providers: Provider[] = [];
+
+if (OIDC_ENABLED) {
+  try {
+    const providersJson = process.env.OIDC_PROVIDERS;
+    if (!providersJson) {
+      throw Error('No OIDC providers configured. Set OIDC_PROVIDERS with at least one provider.');
+    }
+
+    providersConfig = JSON.parse(providersJson);
+    for (const provider of providersConfig) {
+      const JWKS = jose.createRemoteJWKSet(new URL(provider.jwks_url));
+      provider.JWKS = JWKS;
+    }
+  } catch (err) {
+    console.warn('Unable to parse providers from OIDC_PROVIDERS environment variable.');
+    console.error(err);
+  }
+
+  const providerList = new ProviderList();
+  for (const provider of providersConfig) {
+    const { id, name, type, issuer, client_id, client_secret, nextauth_redirect_proxy_url } = provider;
+    const providerClass = providerList.getProviderByName(name.toLocaleLowerCase());
+    if (providerClass) {
+      providers.push(
+        providerClass({
+          id,
+          name,
+          type,
+          issuer,
+          clientId: client_id,
+          clientSecret: client_secret,
+          redirectProxyUrl: nextauth_redirect_proxy_url,
+          account(account: {
+            refresh_token_expires_in: string;
+            access_token: string;
+            expires_at: string;
+            refresh_token: string;
+          }) {
+            const refresh_token_expires_at = Math.floor(Date.now() / 1000) + Number(account.refresh_token_expires_in);
+            return {
+              access_token: account.access_token,
+              expires_at: account.expires_at,
+              refresh_token: account.refresh_token,
+              refresh_token_expires_at,
+            };
+          },
+        }),
+      );
+    }
+  }
+}
+
+export const providerMap = providers
+  .map((provider) => {
+    if (typeof provider === 'function') {
+      const providerData = provider();
+      return { id: providerData.id, name: providerData.name };
+    } else {
+      return { id: provider.id, name: provider.name };
+    }
+  })
+  .filter((provider) => provider.id !== 'credentials');
+
+export const { handlers, signIn, signOut, auth } = NextAuth({
+  providers,
+  pages: {
+    signIn: '/signin',
+  },
+  basePath: AUTH_BASEPATH,
+  session: { strategy: 'jwt' },
+  trustHost: true,
+  secret: process.env.NEXTAUTH_SECRET,
+  useSecureCookies: true,
+  jwt: {
+    async encode(params: JWTEncodeParams<JWT>): Promise<string> {
+      // return a custom encoded JWT string
+      return params?.token?.id_token || '';
+    },
+    async decode(params: JWTDecodeParams): Promise<JWT | null> {
+      // return a `JWT` object, or `null` if decoding failed
+      // const jwt = { access_token: params.token || '' };
+      const jwt = await internalDecode(params, providersConfig);
+
+      return jwt;
+    },
+  },
+  cookies: {
+    sessionToken: {
+      name: `beeai-platform`,
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: process.env.NODE_ENV !== 'development',
+      },
+    },
+  },
+  callbacks: {
+    // middleware callback
+    authorized({ auth }) {
+      if (!OIDC_ENABLED) {
+        return true;
+      }
+
+      return Boolean(auth);
+    },
+    jwt({ token, account, trigger, session }) {
+      if (trigger === 'update') {
+        token.name = session.user.name;
+      }
+      // pull the id token out of the account on signIn
+      if (account) {
+        token['id_token'] = account.id_token;
+        token['access_token'] = account.access_token;
+      }
+      return token;
+    },
+    async session({ session }) {
+      return session;
+    },
+  },
+});
+
+declare module 'next-auth' {
+  /**
+   * Returned by `auth`, `useSession`, `getSession` and received as a prop on the `SessionProvider` React Context
+   */
+  interface Session {
+    id_token: string & DefaultSession['user'];
+    access_token?: string;
+  }
+}
+
+declare module 'next-auth/jwt' {
+  /** Returned by the `jwt` callback and `auth`, when using JWT sessions */
+  interface JWT {
+    /** OpenID ID Token */
+    id_token?: string;
+    access_token?: string;
+  }
+}
