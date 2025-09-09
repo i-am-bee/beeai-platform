@@ -8,19 +8,23 @@ import { BASE_URL } from '#utils/constants.ts';
 import type { FeatureFlags } from '#utils/feature-flags.ts';
 
 interface BuildFullfilmentsParams {
-  platformToken: string;
+  contextToken: {
+    token: string;
+    expires_at: string | null;
+  };
   selectedProviders: Record<string, string>;
   selectedMCPServers: Record<string, string>;
   featureFlags: FeatureFlags;
 }
 
 export const buildFullfilments = ({
-  platformToken,
+  contextToken,
   selectedProviders,
   selectedMCPServers,
   featureFlags,
 }: BuildFullfilmentsParams): Fulfillments => {
   return {
+    getToken: () => contextToken,
     llm: async ({ llm_demands }) => {
       const allDemands = Object.keys(llm_demands);
 
@@ -30,7 +34,7 @@ export const buildFullfilments = ({
             memo.llm_fulfillments[demandKey] = {
               identifier: 'llm_proxy',
               api_base: '{platform_url}/api/v1/openai/',
-              api_key: platformToken,
+              api_key: contextToken.token,
               api_model: 'dummy',
             };
 
@@ -44,7 +48,7 @@ export const buildFullfilments = ({
           memo.llm_fulfillments[demandKey] = {
             identifier: 'llm_proxy',
             api_base: '{platform_url}/api/v1/openai/',
-            api_key: platformToken,
+            api_key: contextToken.token,
             api_model: selectedProviders[demandKey],
           };
 

@@ -126,12 +126,12 @@ export function PlatformContextProvider<UIGenericPart>({
       throw new Error('Could not generate context token');
     }
 
-    return contextToken.token;
+    return contextToken;
   }, [contextId, createContextToken]);
 
   const getFullfilments = useCallback(async () => {
-    const platformToken = await getPlatformToken();
-    return buildFullfilments({ platformToken, selectedProviders, selectedMCPServers, featureFlags });
+    const contextToken = await getPlatformToken();
+    return buildFullfilments({ contextToken, selectedProviders, selectedMCPServers, featureFlags });
   }, [getPlatformToken, selectedProviders, selectedMCPServers, featureFlags]);
 
   useEffect(() => {
@@ -154,7 +154,6 @@ export function PlatformContextProvider<UIGenericPart>({
         selectedProviders,
         getContextId,
         resetContext,
-        getPlatformToken,
         getFullfilments,
         selectProvider,
         selectMCPServer,
