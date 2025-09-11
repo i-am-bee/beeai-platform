@@ -35,4 +35,4 @@ export const LF_PROJECTS_LINK = 'https://lfprojects.org/';
 
 export const OIDC_ENABLED = process.env.OIDC_ENABLED === 'true';
 
-export const AUTH_BASEPATH = '/auth';
+// export const AUTH_BASEPATH = '/api/auth';

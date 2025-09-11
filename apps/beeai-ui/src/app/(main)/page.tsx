@@ -6,7 +6,7 @@
 import { redirect } from 'next/navigation';
 import { connection } from 'next/server';
 
-import { auth } from '#auth.ts';
+import { auth } from '#app/(auth)/auth.ts';
 import EntityNotFound from '#components/EntityNotFound/EntityNotFound.tsx';
 import { ErrorPage } from '#components/ErrorPage/ErrorPage.tsx';
 import { buildAgent, isAgentUiSupported, sortAgentsByName } from '#modules/agents/utils.ts';
