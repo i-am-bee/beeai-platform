@@ -41,6 +41,10 @@ from beeai_sdk.a2a.extensions import (
     TrajectoryExtensionClient,
     TrajectoryExtensionSpec,
 )
+from beeai_sdk.a2a.extensions.services.platform import (
+    PlatformApiExtensionClient,
+    PlatformApiExtensionSpec,
+)
 from beeai_sdk.platform import ModelProvider, Provider
 from beeai_sdk.platform.context import Context, ContextPermissions, ContextToken, Permissions
 from beeai_sdk.platform.model_provider import ModelCapability
@@ -246,44 +250,55 @@ async def _run_agent(
     trajectory_extension = TrajectoryExtensionClient(trajectory_spec) if trajectory_spec else None
     llm_spec = LLMServiceExtensionSpec.from_agent_card(agent_card)
     embedding_spec = EmbeddingServiceExtensionSpec.from_agent_card(agent_card)
+    platform_extension_spec = PlatformApiExtensionSpec.from_agent_card(agent_card)
 
     async with configuration.use_platform_client():
         metadata = (
-            LLMServiceExtensionClient(llm_spec).fulfillment_metadata(
-                llm_fulfillments={
-                    key: LLMFulfillment(
-                        api_base="{platform_url}/api/v1/openai/",
-                        api_key=context_token.token.get_secret_value(),
-                        api_model=(
-                            await ModelProvider.match(
-                                suggested_models=demand.suggested,
-                                capability=ModelCapability.LLM,
-                            )
-                        )[0].model_id,
-                    )
-                    for key, demand in llm_spec.params.llm_demands.items()
-                }
+            (
+                LLMServiceExtensionClient(llm_spec).fulfillment_metadata(
+                    llm_fulfillments={
+                        key: LLMFulfillment(
+                            api_base="{platform_url}/api/v1/openai/",
+                            api_key=context_token.token.get_secret_value(),
+                            api_model=(
+                                await ModelProvider.match(
+                                    suggested_models=demand.suggested,
+                                    capability=ModelCapability.LLM,
+                                )
+                            )[0].model_id,
+                        )
+                        for key, demand in llm_spec.params.llm_demands.items()
+                    }
+                )
+                if llm_spec
+                else {}
             )
-            if llm_spec
-            else {}
-        ) | (
-            EmbeddingServiceExtensionClient(embedding_spec).fulfillment_metadata(
-                embedding_fulfillments={
-                    key: EmbeddingFulfillment(
-                        api_base="{platform_url}/api/v1/openai/",
-                        api_key=context_token.token.get_secret_value(),
-                        api_model=(
-                            await ModelProvider.match(
-                                suggested_models=demand.suggested,
-                                capability=ModelCapability.EMBEDDING,
-                            )
-                        )[0].model_id,
-                    )
-                    for key, demand in embedding_spec.params.embedding_demands.items()
-                }
+            | (
+                EmbeddingServiceExtensionClient(embedding_spec).fulfillment_metadata(
+                    embedding_fulfillments={
+                        key: EmbeddingFulfillment(
+                            api_base="{platform_url}/api/v1/openai/",
+                            api_key=context_token.token.get_secret_value(),
+                            api_model=(
+                                await ModelProvider.match(
+                                    suggested_models=demand.suggested,
+                                    capability=ModelCapability.EMBEDDING,
+                                )
+                            )[0].model_id,
+                        )
+                        for key, demand in embedding_spec.params.embedding_demands.items()
+                    }
+                )
+                if embedding_spec
+                else {}
             )
-            if embedding_spec
-            else {}
+            | (
+                PlatformApiExtensionClient(platform_extension_spec).api_auth_metadata(
+                    auth_token=context_token.token, expires_at=context_token.expires_at
+                )
+                if platform_extension_spec
+                else {}
+            )
         )
 
     msg = Message(
@@ -676,7 +691,7 @@ async def run_agent(
         context = await Context.create()
         context_token = await context.generate_token(
             grant_global_permissions=Permissions(llm={"*"}, embeddings={"*"}, a2a_proxy={"*"}),
-            grant_context_permissions=ContextPermissions(files={"*"}, vector_stores={"*"}),
+            grant_context_permissions=ContextPermissions(files={"*"}, vector_stores={"*"}, context_data={"*"}),
         )
 
     await ensure_llm_provider()

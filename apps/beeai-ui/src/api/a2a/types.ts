@@ -53,6 +53,10 @@ export interface ChatRun<UIGenericPart = never> {
 }
 
 export interface Fulfillments {
+  getToken: () => {
+    token: string;
+    expires_at: string | null;
+  };
   mcp: (demand: MCPDemand) => Promise<MCPFulfillment | null>;
   llm: (demand: LLMDemand) => Promise<LLMFulfillment>;
   oauth: (demand: OAuthDemand) => Promise<OAuthFulfillment | null>;

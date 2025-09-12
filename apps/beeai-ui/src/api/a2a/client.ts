@@ -135,6 +135,14 @@ export const buildA2AClient = async <UIGenericPart = never>({
         };
       }
 
+      metadata = {
+        ...metadata,
+        ['https://a2a-extensions.beeai.dev/services/platform_api/v1']: {
+          auth_token: fulfillments.getToken().token,
+          expires_at: fulfillments.getToken().expires_at,
+        },
+      };
+
       const stream = client.sendMessageStream({
         message: createUserMessage({ message, contextId, metadata, taskId }),
       });
