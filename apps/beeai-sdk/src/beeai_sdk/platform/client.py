@@ -32,8 +32,9 @@ class PlatformClient(httpx.AsyncClient):
         self,
         context_id: str | None = None,  # Enter context scope
         auth_token: str | Secret | None = None,
-        auth_redirect_host: str = "127.0.0.1",
-        auth_redirect_port: int = 0,
+        auth_redirect_uri: str = "http://127.0.0.1:0/callback",
+        auth_redirect_host: str | None = None,
+        auth_redirect_port: int | None = None,
         auth_client_id: str | None = None,
         auth_client_secret: str | None = None,
         *,
@@ -85,6 +86,7 @@ class PlatformClient(httpx.AsyncClient):
         if auth_token:
             self.headers["Authorization"] = f"Bearer {auth_token}"
 
+        self._auth_redirect_uri = AnyUrl(auth_redirect_uri)
         self._auth_redirect_host = auth_redirect_host
         self._auth_redirect_port = auth_redirect_port
         self._auth_client_id = auth_client_id
@@ -126,8 +128,8 @@ class PlatformClient(httpx.AsyncClient):
         self._pending_callback = asyncio.Future()
         return await asyncio.wait_for(self._pending_callback, timeout=5 * 60)
 
-    async def _setup_auth(self, host: str, port: int) -> None:
-        redirect_uris = [AnyUrl(f"http://{host}:{port}/callback")]
+    async def _setup_auth(self, redirect_uri: AnyUrl) -> None:
+        redirect_uris = [redirect_uri]
         storage = await MemoryTokenStorageFactory().create_storage()
         if self._auth_client_id:
             await storage.set_client_info(
@@ -149,6 +151,13 @@ class PlatformClient(httpx.AsyncClient):
             yield
             return
 
+        if not self._auth_redirect_uri.host:
+            raise RuntimeError("Missing host")
+        if not self._auth_redirect_uri.port:
+            raise RuntimeError("Missing port")
+        if not self._auth_redirect_uri.path:
+            raise RuntimeError("Missing path")
+
         @contextlib.asynccontextmanager
         async def lifespan(app: FastAPI):
             self._callback_app_ready.set()
@@ -157,7 +166,7 @@ class PlatformClient(httpx.AsyncClient):
 
         app = FastAPI(lifespan=lifespan)
 
-        @app.get("/callback")
+        @app.get(self._auth_redirect_uri.path)
         async def callback(request: Request):
             code = request.url.params.get("code")
             state = request.url.params.get("state")
@@ -191,13 +200,26 @@ class PlatformClient(httpx.AsyncClient):
             else:
                 return HTMLResponse(status_code=404)
 
-        server = uvicorn.Server(uvicorn.Config(app, host=self._auth_redirect_host, port=self._auth_redirect_port))
+        server = uvicorn.Server(
+            uvicorn.Config(
+                app,
+                host=self._auth_redirect_host if self._auth_redirect_host is not None else self._auth_redirect_uri.host,
+                port=self._auth_redirect_port if self._auth_redirect_port is not None else self._auth_redirect_uri.port,
+            )
+        )
         asyncio.get_running_loop().create_task(server.serve())
 
         sock = server.config.bind_socket()
         assigned_port = sock.getsockname()[1]
 
-        await self._setup_auth(server.config.host, assigned_port)
+        await self._setup_auth(
+            redirect_uri=AnyUrl.build(
+                scheme=self._auth_redirect_uri.scheme,
+                host=self._auth_redirect_uri.host,
+                port=self._auth_redirect_uri.port if self._auth_redirect_uri.port != 0 else assigned_port,
+                path=self._auth_redirect_uri.path,
+            )
+        )
 
         try:
             yield
