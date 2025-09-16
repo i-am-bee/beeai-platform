@@ -7,10 +7,24 @@ import { api } from '#api/index.ts';
 import type { ContextPermissionsGrant, GlobalPermissionGrant } from '#api/types.ts';
 import { ensureData } from '#api/utils.ts';
 
-import type { ModelCapability } from '../types';
+import type { ListContextHistoryParams, ListContextsParams, ModelCapability } from '../types';
 
 export async function createContext() {
   const response = await api.POST('/api/v1/contexts', { body: {} });
+
+  return ensureData(response);
+}
+
+export async function listContexts({ query }: ListContextsParams) {
+  const response = await api.GET('/api/v1/contexts', { params: { query } });
+
+  return ensureData(response);
+}
+
+export async function listContextHistory({ contextId, query }: ListContextHistoryParams) {
+  const response = await api.GET('/api/v1/contexts/{context_id}/history', {
+    params: { path: { context_id: contextId }, query },
+  });
 
   return ensureData(response);
 }
