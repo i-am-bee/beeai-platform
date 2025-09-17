@@ -17,7 +17,7 @@ router = APIRouter()
 
 
 @router.put("", status_code=fastapi.status.HTTP_201_CREATED)
-async def update_provider_variables(
+async def update_user_variables(
     request: UpdateVariablesRequest,
     user_service: UserServiceDependency,
     user: Annotated[AuthorizedUser, Depends(RequiresPermissions(variables={"write"}))],
