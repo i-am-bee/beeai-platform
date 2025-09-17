@@ -26,7 +26,7 @@ async def update_user_variables(
 
 
 @router.get("")
-async def list_provider_variables(
+async def list_user_variables(
     user_service: UserServiceDependency,
     user: Annotated[AuthorizedUser, Depends(RequiresPermissions(variables={"read"}))],
 ) -> ListVariablesSchema:
