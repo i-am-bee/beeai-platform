@@ -88,11 +88,7 @@ async def start(
             while datetime.datetime.now() - start_time < timeout:
                 await asyncio.sleep(1)
                 with contextlib.suppress(httpx.HTTPError, ConnectionError):
-                    try:
-                        await Provider.list()
-                    except Exception as err:
-                        print(err)
-                        raise err
+                    await Provider.list()
                     break
             else:
                 raise ConnectionError(f"Server did not start in {timeout}. Please check your internet connection.")
