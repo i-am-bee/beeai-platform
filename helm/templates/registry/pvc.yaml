@@ -1,0 +1,16 @@
+{{- if .Values.registry.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: beeai-platform-registry-pvc
+  labels:
+    app: beeai-platform-registry
+    {{- include "beeai-platform.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.registry.storage.storage | quote }}
+  storageClassName: {{ .Values.registry.storage.storageClass | quote }}
+{{- end }}

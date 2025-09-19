@@ -160,6 +160,10 @@ class TelemetryConfiguration(BaseModel):
     collector_url: AnyUrl = AnyUrl("http://otel-collector-svc:4318")
 
 
+class GithubConfiguration(BaseModel):
+    token: Secret[str] = Secret("")
+
+
 class DockerConfigJsonAuth(BaseModel, extra="allow"):
     auth: Secret[str] | None = None
     username: str | None = None
@@ -205,7 +209,9 @@ class Configuration(BaseSettings):
     agent_registry: AgentRegistryConfiguration = Field(default_factory=AgentRegistryConfiguration)
     mcp: McpConfiguration = Field(default_factory=McpConfiguration)
     oci_registry: dict[str, OCIRegistryConfiguration] = Field(default_factory=dict)
+    oci_build_registry: OCIRegistryConfiguration | None = None
     oci_registry_docker_config_json: dict[int, DockerConfigJson] = {}
+    github_registry: dict[str, GithubConfiguration] = Field(default_factory=dict)
     telemetry: TelemetryConfiguration = Field(default_factory=TelemetryConfiguration)
     persistence: PersistenceConfiguration = Field(default_factory=PersistenceConfiguration)
     object_storage: ObjectStorageConfiguration = Field(default_factory=ObjectStorageConfiguration)
@@ -234,6 +240,10 @@ class Configuration(BaseSettings):
                     self.oci_registry[registry_short].auth_header = conf.auth
             except ValueError as e:
                 logger.error(f"Failed to parse .dockerconfigjson: {e}. Some agent images might not work correctly.")
+        if self.oci_build_registry:
+            self.oci_build_registry = self.oci_registry[self.oci_build_registry]
+        elif len(self.oci_registry):
+            self.oci_build_registry = next(iter(self.oci_registry.values()))
         return self
 
 

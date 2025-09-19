@@ -33,10 +33,7 @@ spec:
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
       {{- end }}
-      {{- with .Values.imagePullSecrets }}
-      imagePullSecrets:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
+      {{- include "beeai-platform.imagePullSecrets" . | nindent 6 }}
       serviceAccountName: {{ include "beeai-platform.serviceAccountName" . }}
       {{- with .Values.podSecurityContext }}
       securityContext:
@@ -160,13 +157,7 @@ spec:
               value: {{ .Values.docling.enabled | quote }}
             - name: AGENT_REGISTRY__SYNC_PERIOD_SEC
               value: "30"
-            {{- range $idx, $secret := .Values.imagePullSecrets }}
-            - name: OCI_REGISTRY_DOCKER_CONFIG_JSON__{{ $idx }}
-              valueFrom:
-                secretKeyRef:
-                  name: {{ $secret.name }}
-                  key: ".dockerconfigjson"
-            {{- end }}
+            {{- include "beeai-platform.registryEnvVars" . | nindent 12 }}
             - name: AGENT_REGISTRY__LOCATIONS__FILE
               value: file:///app/config/registry.yaml
             {{- range $name, $location := .Values.externalRegistries }}
