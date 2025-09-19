@@ -5,7 +5,6 @@
 
 'use client';
 
-import { useRouter } from 'next/navigation';
 import { type PropsWithChildren, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { v4 as uuid } from 'uuid';
 
@@ -84,7 +83,6 @@ function AgentRunProvider({
   initialMessages = [],
   children,
 }: PropsWithChildren<AgentRunProviderProps>) {
-  const router = useRouter();
   const { contextId, getContextId, resetContext, getFullfilments } = usePlatformContext();
   const [messages, getMessages, setMessages] = useImmerWithGetter<UIMessage[]>(initialMessages);
   const [input, setInput] = useState<string>();
