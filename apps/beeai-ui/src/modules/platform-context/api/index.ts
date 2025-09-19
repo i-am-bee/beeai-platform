@@ -5,18 +5,25 @@
 
 import { api } from '#api/index.ts';
 import type { ContextPermissionsGrant, GlobalPermissionGrant } from '#api/types.ts';
-import { ensureData } from '#api/utils.ts';
+import { ensureData, fetchEntity } from '#api/utils.ts';
 
-import type { ListContextHistoryParams, ListContextsParams, ModelCapability } from '../types';
+import type { ModelCapability } from '../types';
+import type { CreateContextParams, DeleteContextParams, ListContextHistoryParams, ListContextsParams } from './types';
 
-export async function createContext() {
-  const response = await api.POST('/api/v1/contexts', { body: {} });
+export async function createContext(body: CreateContextParams) {
+  const response = await api.POST('/api/v1/contexts', { body });
 
   return ensureData(response);
 }
 
 export async function listContexts({ query }: ListContextsParams) {
   const response = await api.GET('/api/v1/contexts', { params: { query } });
+
+  return ensureData(response);
+}
+
+export async function deleteContext({ context_id }: DeleteContextParams) {
+  const response = await api.DELETE('/api/v1/contexts/{context_id}', { params: { path: { context_id } } });
 
   return ensureData(response);
 }
@@ -59,4 +66,8 @@ export async function createContextToken(
   });
 
   return ensureData(response);
+}
+
+export async function fetchContextHistory(params: ListContextHistoryParams) {
+  return await fetchEntity(() => listContextHistory(params));
 }

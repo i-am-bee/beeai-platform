@@ -7,7 +7,7 @@ import { NavGroup } from '#components/SidePanel/NavGroup.tsx';
 import type { NavItem } from '#components/SidePanel/NavItem.tsx';
 import { NavList } from '#components/SidePanel/NavList.tsx';
 import { useRouteTransition } from '#contexts/TransitionContext/index.ts';
-import { useProviderIdFromUrl } from '#hooks/useProviderIdFromUrl.ts';
+import { useParamsFromUrl } from '#hooks/useParamsFromUrl.ts';
 import { useListAgents } from '#modules/agents/api/queries/useListAgents.ts';
 import { routes } from '#utils/router.ts';
 
@@ -17,7 +17,7 @@ interface Props {
 }
 
 export function AgentsNav({ className, bodyClassName }: Props) {
-  const providerId = useProviderIdFromUrl();
+  const { providerId } = useParamsFromUrl();
   const { transitionTo } = useRouteTransition();
 
   const { data: agents } = useListAgents({ onlyUiSupported: true, sort: true });
