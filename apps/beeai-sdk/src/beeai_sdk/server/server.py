@@ -72,7 +72,7 @@ class Server:
         port: int = 10000,
         uds: str | None = None,
         fd: int | None = None,
-        loop: uvicorn_config.LoopSetupType = "auto",
+        loop: uvicorn_config.LoopFactoryType = "auto",
         http: type[asyncio.Protocol] | uvicorn_config.HTTPProtocolType = "auto",
         ws: type[asyncio.Protocol] | uvicorn_config.WSProtocolType = "auto",
         ws_max_size: int = 16 * 1024 * 1024,
