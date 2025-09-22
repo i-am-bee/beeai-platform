@@ -5,11 +5,12 @@
 
 'use client';
 
+import { useParamsFromUrl } from '#hooks/useParamsFromUrl.ts';
 import { type Agent, InteractionMode } from '#modules/agents/api/types.ts';
-import { useHistory } from '#modules/history/contexts/index.ts';
 
 import { ChatView } from '../chat/ChatView';
 import { HandsOffView } from '../hands-off/HandsOffView';
+import { useRunViewKey } from '../hooks/useRunViewKey';
 import { UiNotAvailableView } from './UiNotAvailableView';
 
 interface Props {
@@ -17,8 +18,8 @@ interface Props {
 }
 
 export function RunView({ agent }: Props) {
-  const { contextId } = useHistory();
-  const key = `${agent.name}${contextId ? `:${contextId}` : ''}`;
+  const { contextId } = useParamsFromUrl();
+  const key = useRunViewKey(agent.name, contextId);
 
   switch (agent.ui?.interaction_mode) {
     case InteractionMode.MultiTurn:
