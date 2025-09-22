@@ -24,13 +24,14 @@ export interface SessionItem {
 }
 
 export function SessionItem({ contextId, providerId, href, heading, agentName, isActive }: SessionItem) {
+  const router = useRouter();
   const [optionsOpen, setOptionsOpen] = useState(false);
 
-  const router = useRouter();
   const { mutateAsync: deleteContext } = useDeleteContext({
-    onSuccess: () => {
+    onMutate: () => {
       if (isActive) {
-        router.replace(routes.agentRun({ providerId }));
+        // TODO: should somehow invalidate the path
+        router.push(routes.agentRun({ providerId }));
       }
     },
   });

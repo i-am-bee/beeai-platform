@@ -12,8 +12,11 @@ import { Role } from '#modules/messages/api/types.ts';
 import type { UIAgentMessage, UIUserMessage } from '#modules/messages/types.ts';
 import { type UIMessage, UIMessageStatus } from '#modules/messages/types.ts';
 import type { ContextHistoryItem } from '#modules/platform-context/api/types.ts';
+import type { TaskId } from '#modules/tasks/api/types.ts';
 
 export function convertHistoryToUIMessages(history: ContextHistoryItem[]): UIMessage[] {
+  let lastTaskId: undefined | TaskId;
+
   const messages = history
     .map(({ data }) =>
       match(data)
@@ -22,13 +25,15 @@ export function convertHistoryToUIMessages(history: ContextHistoryItem[]): UIMes
           const contentParts = processParts(message.parts);
           const parts = [...metadataParts, ...contentParts];
 
+          lastTaskId = message.taskId;
+
           return match(message)
             .with({ role: 'agent' }, () => {
               const uiAgentMessage: UIAgentMessage = {
                 id: uuid(),
                 role: Role.Agent,
                 status: UIMessageStatus.Completed,
-                taskId: message.taskId,
+                taskId: lastTaskId,
                 parts,
               };
 
@@ -38,7 +43,7 @@ export function convertHistoryToUIMessages(history: ContextHistoryItem[]): UIMes
               const uIUserMessage: UIUserMessage = {
                 id: uuid(),
                 role: Role.User,
-                taskId: message.taskId,
+                taskId: lastTaskId,
                 parts,
               };
 
@@ -53,6 +58,7 @@ export function convertHistoryToUIMessages(history: ContextHistoryItem[]): UIMes
             id: uuid(),
             role: Role.Agent,
             status: UIMessageStatus.Completed,
+            taskId: lastTaskId,
             parts: contentParts,
           };
 

@@ -5,7 +5,10 @@
 
 'use client';
 
-import { type PropsWithChildren, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { useRouter } from 'next/navigation';
+import type { PropsWithChildren } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { v4 as uuid } from 'uuid';
 
 import type { AgentSettings } from '#api/a2a/extensions/ui/settings.ts';
@@ -25,6 +28,7 @@ import type { UIAgentMessage, UIMessage, UIMessageForm, UIUserMessage } from '#m
 import { UIMessagePartKind, UIMessageStatus } from '#modules/messages/types.ts';
 import { addTranformedMessagePart, isAgentMessage } from '#modules/messages/utils.ts';
 import { LIST_CONTEXT_HISTORY_DEFAULT_QUERY } from '#modules/platform-context/api/constants.ts';
+import { contextKeys } from '#modules/platform-context/api/keys.ts';
 import { useListContextHistory } from '#modules/platform-context/api/queries/useListContextHistory.ts';
 import { usePlatformContext } from '#modules/platform-context/contexts/index.ts';
 import { PlatformContextProvider } from '#modules/platform-context/contexts/PlatformContextProvider.tsx';
@@ -36,6 +40,7 @@ import { SourcesProvider } from '#modules/sources/contexts/SourcesProvider.tsx';
 import { getMessagesSourcesMap } from '#modules/sources/utils.ts';
 import type { TaskId } from '#modules/tasks/api/types.ts';
 import { isNotNull } from '#utils/helpers.ts';
+import { routes } from '#utils/router.ts';
 
 import { MessagesProvider } from '../../../messages/contexts/Messages/MessagesProvider';
 import { AgentStatusProvider } from '../agent-status/AgentStatusProvider';
@@ -63,7 +68,7 @@ export function AgentRunProviders({ agent, children }: PropsWithChildren<Props>)
         <AgentRunProvider
           agent={agent}
           agentClient={agentClient}
-          initialMessages={history ? convertHistoryToUIMessages(history) : undefined}
+          initialMessages={history ? convertHistoryToUIMessages(history.reverse()) : undefined}
         >
           {children}
         </AgentRunProvider>
@@ -83,6 +88,8 @@ function AgentRunProvider({
   initialMessages = [],
   children,
 }: PropsWithChildren<AgentRunProviderProps>) {
+  const router = useRouter();
+  const queryClient = useQueryClient();
   const { contextId, getContextId, resetContext, getFullfilments } = usePlatformContext();
   const [messages, getMessages, setMessages] = useImmerWithGetter<UIMessage[]>(initialMessages);
   const [input, setInput] = useState<string>();
@@ -151,8 +158,6 @@ function AgentRunProvider({
   }, [updateCurrentAgentMessage]);
 
   const clear = useCallback(() => {
-    // TODO: navigate to new chat url
-
     setMessages([]);
     setStats(undefined);
     clearFiles();
@@ -160,7 +165,9 @@ function AgentRunProvider({
     setIsPending(false);
     setInput(undefined);
     pendingRun.current = undefined;
-  }, [setMessages, clearFiles, resetContext]);
+
+    router.push(routes.agentRun({ providerId: agent.provider.id }));
+  }, [router, agent.provider.id, setMessages, clearFiles, resetContext]);
 
   const checkPendingRun = useCallback(() => {
     if (pendingRun.current || pendingSubscription.current) {
@@ -255,9 +262,25 @@ function AgentRunProvider({
         setStats((stats) => ({ ...stats, endTime: Date.now() }));
         pendingRun.current = undefined;
         pendingSubscription.current = undefined;
+
+        if (getMessages().length === 2) {
+          queryClient.invalidateQueries({ queryKey: contextKeys.lists() });
+        }
+
+        queryClient.invalidateQueries({ queryKey: contextKeys.history({ contextId }) });
       }
     },
-    [checkPendingRun, getContextId, getFullfilments, setMessages, agentClient, updateCurrentAgentMessage, handleError],
+    [
+      queryClient,
+      getMessages,
+      checkPendingRun,
+      getContextId,
+      getFullfilments,
+      setMessages,
+      agentClient,
+      updateCurrentAgentMessage,
+      handleError,
+    ],
   );
 
   const chat = useCallback(

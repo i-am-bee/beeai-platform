@@ -9,10 +9,10 @@ import { deleteContext } from '..';
 import { contextKeys } from '../keys';
 
 interface Props {
-  onSuccess?: () => void;
+  onMutate?: () => void;
 }
 
-export function useDeleteContext({ onSuccess }: Props = {}) {
+export function useDeleteContext({ onMutate }: Props = {}) {
   const mutation = useMutation({
     mutationFn: deleteContext,
     meta: {
@@ -22,7 +22,7 @@ export function useDeleteContext({ onSuccess }: Props = {}) {
         includeErrorMessage: true,
       },
     },
-    onSuccess,
+    onMutate,
   });
 
   return mutation;
