@@ -27,6 +27,7 @@ ROLE_PERMISSIONS: dict[UserRole, Permissions] = {
     UserRole.USER: Permissions(
         system_configuration={"read"},
         files={"*"},
+        variables={"*"},
         vector_stores={"*"},
         llm={"*"},
         embeddings={"*"},
