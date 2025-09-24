@@ -3,15 +3,21 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import type { NavItem } from '#components/SidePanel/Nav.tsx';
-import { Nav } from '#components/SidePanel/Nav.tsx';
+import { NavGroup } from '#components/SidePanel/NavGroup.tsx';
+import type { NavItem } from '#components/SidePanel/NavItem.tsx';
+import { NavList } from '#components/SidePanel/NavList.tsx';
 import { useRouteTransition } from '#contexts/TransitionContext/index.ts';
-import { useProviderIdFromUrl } from '#hooks/useProviderIdFromUrl.ts';
+import { useParamsFromUrl } from '#hooks/useParamsFromUrl.ts';
 import { useListAgents } from '#modules/agents/api/queries/useListAgents.ts';
 import { routes } from '#utils/router.ts';
 
-export function AgentsNav() {
-  const providerId = useProviderIdFromUrl();
+interface Props {
+  className?: string;
+  bodyClassName?: string;
+}
+
+export function AgentsNav({ className, bodyClassName }: Props) {
+  const { providerId } = useParamsFromUrl();
   const { transitionTo } = useRouteTransition();
 
   const { data: agents } = useListAgents({ onlyUiSupported: true, sort: true });
@@ -27,5 +33,9 @@ export function AgentsNav() {
     };
   });
 
-  return <Nav title="Agents" items={items} skeletonCount={10} />;
+  return (
+    <NavGroup heading="Agents" className={className} bodyClassName={bodyClassName}>
+      <NavList items={items} skeletonCount={5} />
+    </NavGroup>
+  );
 }

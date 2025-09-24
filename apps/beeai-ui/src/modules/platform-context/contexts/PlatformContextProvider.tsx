@@ -3,10 +3,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { type PropsWithChildren, useCallback, useEffect, useState } from 'react';
+import { type PropsWithChildren, useCallback, useEffect, useRef, useState } from 'react';
 
 import type { AgentA2AClient } from '#api/a2a/types.ts';
 import { useApp } from '#contexts/App/index.ts';
+import type { Agent } from '#modules/agents/api/types.ts';
 
 import { useCreateContext } from '../api/mutations/useCreateContext';
 import { useCreateContextToken } from '../api/mutations/useCreateContextToken';
@@ -16,14 +17,19 @@ import { PlatformContext } from './platform-context';
 
 interface Props<UIGenericPart> {
   agentClient?: AgentA2AClient<UIGenericPart>;
+  agent?: Agent;
+  contextId?: string;
 }
 
 export function PlatformContextProvider<UIGenericPart>({
-  children,
   agentClient,
+  agent,
+  contextId: contextIdProp,
+  children,
 }: PropsWithChildren<Props<UIGenericPart>>) {
   const { featureFlags } = useApp();
-  const [contextId, setContextId] = useState<string | null>(null);
+  const [contextId, setContextId] = useState<string | null>(contextIdProp ?? null);
+  const creatingContextRef = useRef(false);
 
   const [selectedEmbeddingProviders, setSelectedEmbeddingProviders] = useState<Record<string, string>>({});
   const [selectedLLMProviders, setSelectedLLMProviders] = useState<Record<string, string>>({});
@@ -101,22 +107,17 @@ export function PlatformContextProvider<UIGenericPart>({
     );
   }, [agentClient?.mcpDemands]);
 
-  const setContext = useCallback(
-    (context: Awaited<ReturnType<typeof createContext>>) => {
-      if (!context) {
-        throw new Error(`Context has not been created`);
-      }
+  const setContext = useCallback((context: Awaited<ReturnType<typeof createContext>>) => {
+    if (!context) {
+      throw new Error(`Context has not been created`);
+    }
 
-      setContextId(context.id);
-    },
-    [setContextId],
-  );
+    setContextId(context.id);
+  }, []);
 
   const resetContext = useCallback(() => {
     setContextId(null);
-
-    createContext().then(setContext);
-  }, [createContext, setContext]);
+  }, []);
 
   const selectMCPServer = useCallback(
     (key: string, value: string) => {
@@ -174,8 +175,23 @@ export function PlatformContextProvider<UIGenericPart>({
   }, [selectedLLMProviders, selectedEmbeddingProviders, selectedMCPServers, featureFlags, getContextToken]);
 
   useEffect(() => {
-    createContext().then(setContext);
-  }, [createContext, setContext]);
+    if (contextId || creatingContextRef.current) {
+      return;
+    }
+
+    creatingContextRef.current = true;
+
+    createContext({
+      metadata: {
+        agent_name: agent?.name ?? '',
+        provider_id: agent?.provider.id ?? '',
+      },
+    })
+      .then(setContext)
+      .finally(() => {
+        creatingContextRef.current = false;
+      });
+  }, [contextId, agent, createContext, setContext]);
 
   const getContextId = useCallback(() => {
     if (!contextId) {

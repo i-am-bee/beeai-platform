@@ -34,7 +34,7 @@ export function useMatchEmbeddingProviders(
 
       const allProviders = await Promise.all(
         demandKeys.map(async (demandKey) => {
-          const result = await matchProviders(demands[demandKey].suggested ?? [], ModelCapability.EMBEDDING);
+          const result = await matchProviders(demands[demandKey].suggested ?? [], ModelCapability.Embedding);
           return {
             key: demandKey,
             providers: result?.items.map((item) => item.model_id).slice(0, MAX_PROVIDERS) ?? [],
@@ -77,7 +77,7 @@ export function useMatchLLMProviders(
 
       const allProviders = await Promise.all(
         demandKeys.map(async (demandKey) => {
-          const result = await matchProviders(demands[demandKey].suggested ?? [], ModelCapability.LLM);
+          const result = await matchProviders(demands[demandKey].suggested ?? [], ModelCapability.Llm);
           return {
             key: demandKey,
             providers: result?.items.map((item) => item.model_id).slice(0, MAX_PROVIDERS) ?? [],
