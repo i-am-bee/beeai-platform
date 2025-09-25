@@ -11,6 +11,7 @@ import { getAgentPromptExamples } from '#modules/agents/utils.ts';
 
 import { FileUpload } from '../../files/components/FileUpload';
 import { useAgentRun } from '../contexts/agent-run';
+import { SecretsModalPortal } from '../secrets/SecretsModalPortal';
 import { RunInput } from './RunInput';
 import classes from './RunLandingView.module.scss';
 
@@ -26,6 +27,7 @@ export function RunLandingView() {
 
         <RunInput promptExamples={promptExamples} />
       </Container>
+      <SecretsModalPortal />
     </FileUpload>
   );
 }

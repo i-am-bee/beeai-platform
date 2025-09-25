@@ -17,8 +17,9 @@ import { useProviderIdFromUrl } from '#hooks/useProviderIdFromUrl.ts';
 import { useAgent } from '../api/queries/useAgent';
 import { AgentCredits } from './AgentCredits';
 import classes from './AgentDetailPanel.module.scss';
+import { AgentSecrets } from './AgentSecrets';
 import { AgentTags } from './AgentTags';
-import { AgentTools } from './AgentTools';
+import { AgentToolsList } from './AgentToolsList';
 
 export function AgentDetailPanel() {
   const providerId = useProviderIdFromUrl();
@@ -40,8 +41,8 @@ export function AgentDetailPanel() {
         <Tabs>
           <TabList>
             <Tab>Agent details</Tab>
-
             <Tab>Tools</Tab>
+            <Tab>Secrets</Tab>
           </TabList>
 
           <TabPanels>
@@ -70,7 +71,10 @@ export function AgentDetailPanel() {
             </TabPanel>
 
             <TabPanel>
-              <AgentTools agent={agent} />
+              <AgentToolsList agent={agent} />
+            </TabPanel>
+            <TabPanel>
+              <AgentSecrets />
             </TabPanel>
           </TabPanels>
         </Tabs>
