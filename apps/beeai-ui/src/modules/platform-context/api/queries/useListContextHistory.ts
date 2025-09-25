@@ -5,13 +5,14 @@
 
 import { useInfiniteQuery } from '@tanstack/react-query';
 
+import type { PartialBy } from '#@types/utils.ts';
 import { isNotNull } from '#utils/helpers.ts';
 
 import { listContextHistory } from '..';
 import { contextKeys } from '../keys';
 import type { ListContextHistoryParams, ListContextHistoryResponse } from '../types';
 
-type Params = ListContextHistoryParams & {
+type Params = PartialBy<ListContextHistoryParams, 'contextId'> & {
   initialData?: ListContextHistoryResponse;
 };
 
@@ -19,10 +20,13 @@ export function useListContextHistory(params: Params) {
   const { contextId, query: queryParams, initialData } = params;
 
   const query = useInfiniteQuery({
-    queryKey: contextKeys.history(params),
+    queryKey: contextKeys.history({
+      contextId: contextId!,
+      query: queryParams,
+    }),
     queryFn: ({ pageParam }: { pageParam?: string }) => {
       return listContextHistory({
-        contextId,
+        contextId: contextId!,
         query: {
           ...queryParams,
           page_token: pageParam,

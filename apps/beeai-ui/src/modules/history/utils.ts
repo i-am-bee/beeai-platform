@@ -15,11 +15,11 @@ import type { ContextHistoryItem } from '#modules/platform-context/api/types.ts'
 import type { TaskId } from '#modules/tasks/api/types.ts';
 
 export function convertHistoryToUIMessages(history: ContextHistoryItem[]): UIMessage[] {
-  let lastTaskId: undefined | TaskId;
+  const { messages } = history.reduce<{ messages: UIMessage[]; taskId?: TaskId }>(
+    (acc, { data }) => {
+      let lastTaskId = acc.taskId;
 
-  const messages = history
-    .map(({ data }) =>
-      match(data)
+      const message = match(data)
         .with({ kind: 'message' }, (message: Message) => {
           const metadataParts = processMessageMetadata(message);
           const contentParts = processParts(message.parts);
@@ -28,58 +28,59 @@ export function convertHistoryToUIMessages(history: ContextHistoryItem[]): UIMes
           lastTaskId = message.taskId;
 
           return match(message)
-            .with({ role: 'agent' }, () => {
-              const uiAgentMessage: UIAgentMessage = {
+            .with(
+              { role: 'agent' },
+              (): UIAgentMessage => ({
                 id: uuid(),
                 role: Role.Agent,
                 status: UIMessageStatus.Completed,
                 taskId: lastTaskId,
                 parts,
-              };
-
-              return uiAgentMessage;
-            })
-            .with({ role: 'user' }, () => {
-              const uIUserMessage: UIUserMessage = {
+              }),
+            )
+            .with(
+              { role: 'user' },
+              (): UIUserMessage => ({
                 id: uuid(),
                 role: Role.User,
                 taskId: lastTaskId,
                 parts,
-              };
-
-              return uIUserMessage;
-            })
+              }),
+            )
             .exhaustive();
         })
-        .otherwise((artifact: Artifact) => {
+        .otherwise((artifact: Artifact): UIAgentMessage => {
           const contentParts = processParts(artifact.parts);
 
-          const agentMessage: UIAgentMessage = {
+          return {
             id: uuid(),
             role: Role.Agent,
             status: UIMessageStatus.Completed,
             taskId: lastTaskId,
             parts: contentParts,
           };
+        });
 
-          return agentMessage;
-        }),
-    )
-    .reduce<UIMessage[]>((messages, message) => {
-      const lastMessage = messages.at(-1);
+      const lastMessage = acc.messages.at(-1);
       const shouldGroup = lastMessage && lastMessage.role === message.role && lastMessage.taskId === message.taskId;
 
-      if (shouldGroup) {
-        const updatedMessage = {
-          ...lastMessage,
-          parts: [...lastMessage.parts, ...message.parts],
-        };
+      const messages = shouldGroup
+        ? [
+            ...acc.messages.slice(0, -1),
+            {
+              ...lastMessage,
+              parts: [...lastMessage.parts, ...message.parts],
+            },
+          ]
+        : [...acc.messages, message];
 
-        return [...messages.slice(0, -1), updatedMessage];
-      }
-
-      return [...messages, message];
-    }, []);
+      return {
+        messages,
+        taskId: lastTaskId,
+      };
+    },
+    { messages: [], taskId: undefined },
+  );
 
   return messages;
 }

@@ -57,7 +57,7 @@ export function AgentRunProviders({ agent, children }: PropsWithChildren<Props>)
   });
   const { contextId, initialData } = useHistory();
   const { data: history } = useListContextHistory({
-    contextId: contextId!,
+    contextId,
     query: LIST_CONTEXT_HISTORY_DEFAULT_QUERY,
     initialData,
   });
@@ -68,7 +68,7 @@ export function AgentRunProviders({ agent, children }: PropsWithChildren<Props>)
         <AgentRunProvider
           agent={agent}
           agentClient={agentClient}
-          initialMessages={history ? convertHistoryToUIMessages(history.reverse()) : undefined}
+          initialMessages={history ? convertHistoryToUIMessages([...history].reverse()) : undefined}
         >
           {children}
         </AgentRunProvider>
