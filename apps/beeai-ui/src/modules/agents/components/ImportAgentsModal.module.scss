@@ -3,19 +3,27 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+.form {
+  display: flex;
+  flex-direction: column;
+  row-gap: $spacing-04;
+  &.showLogs {
+    max-block-size: 100%;
+  }
+}
+
 .stack {
   display: flex;
   flex-direction: column;
   row-gap: $spacing-05;
 }
 
-.locationInput {
-  min-block-size: rem(92px);
+.loading {
+  flex-shrink: 0;
+  min-block-size: rem(24px);
 }
 
-.githubInfo {
-  display: flex;
-  flex-direction: column;
-  gap: $spacing-04;
-  padding-block-end: $spacing-04;
+.logs {
+  max-block-size: rem(256px);
+  overflow-y: auto;
 }
