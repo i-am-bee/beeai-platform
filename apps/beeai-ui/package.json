@@ -23,6 +23,7 @@
     "@radix-ui/react-slot": "^1.2.3",
     "@tanstack/react-query": "catalog:",
     "clsx": "catalog:",
+    "eventsource-parser": "^3.0.6",
     "fetch-event-stream": "^0.1.5",
     "framer-motion": "^12.23.21",
     "humanize-duration": "^3.33.1",
