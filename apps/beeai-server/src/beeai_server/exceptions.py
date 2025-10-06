@@ -45,6 +45,20 @@ class EntityNotFoundError(PlatformError):
         super().__init__(f"{entity} with {attribute} {id} not found", status_code)
 
 
+class ForbiddenUpdateError(PlatformError):
+    entity: str
+    id: UUID | str
+    attribute: str
+
+    def __init__(
+        self, entity: str, id: UUID | str, status_code: int = status.HTTP_403_FORBIDDEN, attribute: str = "id"
+    ):
+        self.entity = entity
+        self.id = id
+        self.attribute = attribute
+        super().__init__(f"{entity} with {attribute} {id} is owned by another user", status_code)
+
+
 class InvalidVectorDimensionError(PlatformError): ...
 
 

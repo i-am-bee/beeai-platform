@@ -7,9 +7,10 @@ from uuid import UUID
 
 import fastapi
 import fastapi.responses
+from a2a.server.apps.rest.rest_adapter import RESTAdapter
 from a2a.types import AgentCard, TransportProtocol
 from a2a.utils import AGENT_CARD_WELL_KNOWN_PATH
-from fastapi import Depends, Request
+from fastapi import Depends, HTTPException, Request
 
 from beeai_server.api.dependencies import (
     A2AProxyServiceDependency,
@@ -85,9 +86,20 @@ async def proxy_request(
     provider_id: UUID,
     request: fastapi.requests.Request,
     a2a_proxy: A2AProxyServiceDependency,
-    _: Annotated[AuthorizedUser, Depends(RequiresPermissions(a2a_proxy={"*"}))],
+    provider_service: ProviderServiceDependency,
+    user: Annotated[AuthorizedUser, Depends(RequiresPermissions(a2a_proxy={"*"}))],
     path: str = "",
 ):
-    client = await a2a_proxy.get_proxy_client(provider_id=provider_id)
-    response = await client.send_request(method=request.method, url=f"/{path}", content=request.stream())
-    return _to_fastapi(response)
+    provider = await provider_service.get_provider(provider_id=provider_id)
+    client = await a2a_proxy.ensure_agent(provider_id=provider_id)
+    agent_card = create_proxy_agent_card(provider.agent_card, provider_id=provider.id, request=request)
+
+    adapter = RESTAdapter(
+        agent_card=agent_card,
+        http_handler=a2a_proxy.get_request_handler(provider=provider, user=user),
+    )
+
+    if not (handler := adapter.routes().get((request.method, path), None)):
+        raise HTTPException(status_code=404, detail="Not found")
+
+    return await handler(request)

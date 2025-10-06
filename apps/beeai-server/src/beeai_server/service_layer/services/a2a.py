@@ -1,20 +1,37 @@
 # Copyright 2025 © BeeAI a Series of LF Projects, LLC
 # SPDX-License-Identifier: Apache-2.0
-import functools
 import logging
-from collections.abc import AsyncIterable
-from contextlib import AsyncExitStack
+from collections.abc import AsyncGenerator, AsyncIterable, AsyncIterator
+from contextlib import asynccontextmanager
 from datetime import timedelta
-from typing import Any, NamedTuple, cast
+from typing import NamedTuple, cast
 from uuid import UUID
 
 import httpx
-from httpx import AsyncByteStream
+from a2a.client import ClientConfig, ClientFactory
+from a2a.client.base_client import BaseClient
+from a2a.client.transports.base import ClientTransport
+from a2a.server.context import ServerCallContext
+from a2a.server.events import Event
+from a2a.server.request_handlers.request_handler import RequestHandler
+from a2a.types import (
+    AgentCard,
+    DeleteTaskPushNotificationConfigParams,
+    GetTaskPushNotificationConfigParams,
+    ListTaskPushNotificationConfigParams,
+    Message,
+    MessageSendParams,
+    Task,
+    TaskIdParams,
+    TaskPushNotificationConfig,
+    TaskQueryParams,
+)
 from kink import inject
 from structlog.contextvars import bind_contextvars, unbind_contextvars
 
 from beeai_server.configuration import Configuration
-from beeai_server.domain.models.provider import ProviderDeploymentState
+from beeai_server.domain.models.provider import Provider, ProviderDeploymentState
+from beeai_server.domain.models.user import User
 from beeai_server.service_layer.deployment_manager import IProviderDeploymentManager
 from beeai_server.service_layer.services.users import UserService
 from beeai_server.service_layer.unit_of_work import IUnitOfWorkFactory
@@ -30,49 +47,74 @@ class A2AServerResponse(NamedTuple):
     media_type: str
 
 
-class ProxyClient:
-    def __init__(self, client: httpx.AsyncClient):
-        self._client = client
+class ProxyRequestHandler(RequestHandler):
+    def __init__(self, agent_card: AgentCard, uow: IUnitOfWorkFactory, user: User):
+        self._agent_card = agent_card
+        self._user = user
+        self._uow = uow
 
-    @functools.wraps(httpx.AsyncClient.stream)
-    async def send_request(*args, **kwargs) -> A2AServerResponse:
-        self = args[0]  # extract self for type checking
-        rest_args: tuple[Any, ...] = args[1:]
-        exit_stack = AsyncExitStack()
-        try:
-            client = await exit_stack.enter_async_context(self._client)
-            resp: httpx.Response = await exit_stack.enter_async_context(client.stream(*rest_args, **kwargs))
+    @asynccontextmanager
+    async def _client_transport(self) -> AsyncIterator[ClientTransport]:
+        async with httpx.AsyncClient(follow_redirects=True) as httpx_client:
+            client: BaseClient = cast(
+                BaseClient,
+                ClientFactory(config=ClientConfig(httpx_client=httpx_client)).create(card=self._agent_card),
+            )
+            yield client._transport
 
-            try:
-                content_type = resp.headers["content-type"]
-                is_stream = content_type.startswith("text/event-stream")
-            except KeyError:
-                content_type = None
-                is_stream = False
+    async def _check_task(self, task_id: str, context_id: str | None = None): ...
 
-            async def stream_fn():
-                try:
-                    async for event in cast(AsyncByteStream, resp.stream):
-                        yield event
-                finally:
-                    await exit_stack.pop_all().aclose()
+    async def on_get_task(self, params: TaskQueryParams, context: ServerCallContext | None = None) -> Task | None:
+        async with self._client_transport() as transport:
+            return await transport.get_task(params)
 
-            common = {
-                "status_code": resp.status_code,
-                "headers": resp.headers,
-                "media_type": content_type,
-            }
-            if is_stream:
-                return A2AServerResponse(content=None, stream=stream_fn(), **common)
-            else:
-                try:
-                    await resp.aread()
-                    return A2AServerResponse(stream=None, content=resp.content, **common)
-                finally:
-                    await exit_stack.pop_all().aclose()
-        except BaseException:
-            await exit_stack.pop_all().aclose()
-            raise
+    async def on_cancel_task(self, params: TaskIdParams, context: ServerCallContext | None = None) -> Task | None:
+        async with self._client_transport() as transport:
+            return await transport.cancel_task(params)
+
+    async def on_message_send(
+        self, params: MessageSendParams, context: ServerCallContext | None = None
+    ) -> Task | Message:
+        async with self._client_transport() as transport:
+            return await transport.send_message(params)
+
+    async def on_message_send_stream(
+        self, params: MessageSendParams, context: ServerCallContext | None = None
+    ) -> AsyncGenerator[Event]:
+        async with self._client_transport() as transport:
+            async for event in transport.send_message_streaming(params):
+                yield event
+
+    async def on_set_task_push_notification_config(
+        self, params: TaskPushNotificationConfig, context: ServerCallContext | None = None
+    ) -> TaskPushNotificationConfig:
+        async with self._client_transport() as transport:
+            return await transport.set_task_callback(params)
+
+    async def on_get_task_push_notification_config(
+        self, params: TaskIdParams | GetTaskPushNotificationConfigParams, context: ServerCallContext | None = None
+    ) -> TaskPushNotificationConfig:
+        async with self._client_transport() as transport:
+            if isinstance(params, TaskIdParams):
+                params = GetTaskPushNotificationConfigParams(id=params.id, metadata=params.metadata)
+            return await transport.get_task_callback(params)
+
+    async def on_resubscribe_to_task(
+        self, params: TaskIdParams, context: ServerCallContext | None = None
+    ) -> AsyncGenerator[Event]:
+        async with self._client_transport() as transport:
+            async for event in transport.resubscribe(params):
+                yield event
+
+    async def on_list_task_push_notification_config(
+        self, params: ListTaskPushNotificationConfigParams, context: ServerCallContext | None = None
+    ) -> list[TaskPushNotificationConfig]:
+        raise NotImplementedError("This is not supported by the client transport yet")
+
+    async def on_delete_task_push_notification_config(
+        self, params: DeleteTaskPushNotificationConfigParams, context: ServerCallContext | None = None
+    ) -> None:
+        raise NotImplementedError("This is not supported by the client transport yet")
 
 
 @inject
@@ -91,7 +133,12 @@ class A2AProxyService:
         self._user_service = user_service
         self._config = configuration
 
-    async def get_proxy_client(self, *, provider_id: UUID) -> ProxyClient:
+    async def get_request_handler(self, *, provider: Provider, user: User) -> RequestHandler:
+        url = await self.ensure_agent(provider_id=provider.id)
+        agent_card = provider.agent_card.model_copy(update={"url": str(url)})
+        return ProxyRequestHandler(agent_card=agent_card, user=user)
+
+    async def ensure_agent(self, *, provider_id: UUID) -> httpx.AsyncClient:
         try:
             bind_contextvars(provider=provider_id)
 
@@ -101,7 +148,7 @@ class A2AProxyService:
                 await uow.commit()
 
             if not provider.managed:
-                return ProxyClient(httpx.AsyncClient(base_url=str(provider.source.root), timeout=None))
+                return httpx.AsyncClient(base_url=str(provider.source.root), timeout=None)
 
             provider_url = await self._deploy_manager.get_provider_url(provider_id=provider.id)
             [state] = await self._deploy_manager.state(provider_ids=[provider.id])
@@ -129,6 +176,6 @@ class A2AProxyService:
                 logger.info("Waiting for provider to start up...")
                 await self._deploy_manager.wait_for_startup(provider_id=provider.id, timeout=self.STARTUP_TIMEOUT)
                 logger.info("Provider is ready...")
-            return ProxyClient(httpx.AsyncClient(base_url=str(provider_url), timeout=None))
+            return httpx.AsyncClient(base_url=str(provider_url), timeout=None)
         finally:
             unbind_contextvars("provider")
