@@ -9,6 +9,7 @@ import { Container } from '#components/layouts/Container.tsx';
 import { AgentGreeting } from '#modules/agents/components/AgentGreeting.tsx';
 import { getAgentPromptExamples } from '#modules/agents/utils.ts';
 
+// import { Canvas } from '#modules/canvas/components/Canvas.tsx';
 import { FileUpload } from '../../files/components/FileUpload';
 import { useAgentRun } from '../contexts/agent-run';
 import { SecretsModalPortal } from '../secrets/SecretsModalPortal';
@@ -26,6 +27,8 @@ export function RunLandingView() {
         <AgentGreeting agent={agent} />
 
         <RunInput promptExamples={promptExamples} />
+
+        {/* <Canvas /> */}
       </Container>
       <SecretsModalPortal />
     </FileUpload>
