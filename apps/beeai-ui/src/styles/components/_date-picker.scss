@@ -32,3 +32,10 @@
 .cds--date-picker__day {
   border-radius: $border-radius;
 }
+
+.cds--date-picker__input:disabled {
+  &,
+  &:hover {
+    border-block-end-color: $border-subtle-00;
+  }
+}
