@@ -4,14 +4,13 @@
  */
 
 import { Button } from '@carbon/react';
-import type { CSSProperties } from 'react';
 import { FormProvider, useForm } from 'react-hook-form';
 
 import type { FormRender } from '#api/a2a/extensions/ui/form.ts';
 
 import type { RunFormValues } from '../types';
 import { getDefaultValues } from '../utils';
-import { FormField } from './FormField';
+import { FormFields } from './FormFields';
 import classes from './FormRenderer.module.scss';
 
 interface Props {
@@ -39,11 +38,7 @@ export function FormRenderer({ definition, defaultHeading, showHeading = true, i
 
           {description && <p>{description}</p>}
 
-          <div className={classes.fields} style={{ '--grid-columns': columns } as CSSProperties}>
-            {fields.map((field) => (
-              <FormField key={field.id} field={field} />
-            ))}
-          </div>
+          <FormFields fields={fields} columns={columns} />
 
           {!isDisabled && (
             <>
