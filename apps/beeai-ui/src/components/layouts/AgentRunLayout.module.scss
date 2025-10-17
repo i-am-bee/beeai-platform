@@ -1,0 +1,12 @@
+/**
+ * Copyright 2025 © BeeAI a Series of LF Projects, LLC
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+.root {
+  min-inline-size: 0;
+  block-size: 100%;
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: var(--agent-header-height) 1fr;
+}

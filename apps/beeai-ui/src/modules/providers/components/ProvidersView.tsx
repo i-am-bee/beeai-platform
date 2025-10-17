@@ -24,7 +24,7 @@ import { TableViewToolbar } from '#components/TableView/TableViewToolbar.tsx';
 import { useModal } from '#contexts/Modal/index.tsx';
 import { useTableSearch } from '#hooks/useTableSearch.ts';
 import { useListAgents } from '#modules/agents/api/queries/useListAgents.ts';
-import { ImportAgentsModal } from '#modules/agents/components/ImportAgentsModal.tsx';
+import { ImportAgentsModal } from '#modules/agents/components/import/ImportAgentsModal.tsx';
 import { getAgentsProgrammingLanguages } from '#modules/agents/utils.ts';
 import { isNotNull } from '#utils/helpers.ts';
 
@@ -37,7 +37,7 @@ export function ProvidersView() {
   const { openModal, openConfirmation } = useModal();
   const { data: providers, isPending: isProvidersPending } = useListProviders();
   const { mutate: deleteProvider } = useDeleteProvider();
-  const { data: agents, isPending: isAgentsPending } = useListAgents({ onlyUiSupported: true, sort: true });
+  const { data: agents, isPending: isAgentsPending } = useListAgents({ onlyUiSupported: true, orderBy: 'createdAt' });
   const agentsByProvider = groupAgentsByProvider(agents);
 
   const entries = useMemo(
