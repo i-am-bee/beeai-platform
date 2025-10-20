@@ -36,8 +36,37 @@ export function LineClampText({
   const [showButton, setShowButton] = useState(false);
 
   const Component = useBlockElement ? 'div' : 'span';
+  const shouldPreventCollapse = useCallback(() => {
+    if (!isExpanded || typeof window === 'undefined') {
+      return false;
+    }
+
+    const selection = window.getSelection();
+
+    if (!selection || selection.isCollapsed) {
+      return false;
+    }
+
+    const element = textRef.current;
+    const { anchorNode, focusNode } = selection;
+
+    if (!element || !anchorNode || !focusNode) {
+      return false;
+    }
+
+    return element.contains(anchorNode) || element.contains(focusNode);
+  }, [isExpanded]);
+
+  const handleToggle = useCallback(() => {
+    if (shouldPreventCollapse()) {
+      return;
+    }
+
+    setIsExpanded((state) => !state);
+  }, [shouldPreventCollapse]);
+
   const buttonProps = {
-    onClick: () => setIsExpanded((state) => !state),
+    onClick: handleToggle,
     'aria-controls': id,
     'aria-expanded': isExpanded,
   };
