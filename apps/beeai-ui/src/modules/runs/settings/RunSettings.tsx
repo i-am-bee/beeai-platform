@@ -11,6 +11,7 @@ import type { RefObject } from 'react';
 
 import { fadeProps } from '#utils/fadeProps.ts';
 
+import { useAgentDemands } from '../contexts/agent-demands';
 import { useAgentRun } from '../contexts/agent-run';
 import classes from './RunSettings.module.scss';
 import { RunSettingsForm } from './RunSettingsForm';
@@ -21,13 +22,14 @@ interface Props {
 }
 
 export function RunSettings({ containerRef }: Props) {
-  const { settingsRender, hasMessages } = useAgentRun();
+  const { settingsDemands } = useAgentDemands();
+  const { hasMessages } = useAgentRun();
 
   const { isOpen, refs, floatingStyles, context, getReferenceProps, getFloatingProps } = useRunSettingsDialog({
     containerRef,
   });
 
-  if (!settingsRender?.fields.length) {
+  if (!settingsDemands?.fields.length) {
     return null;
   }
 
@@ -60,7 +62,7 @@ export function RunSettings({ containerRef }: Props) {
                   })}
                   className={classes.content}
                 >
-                  <RunSettingsForm settingsRender={settingsRender} />
+                  <RunSettingsForm settingsDemands={settingsDemands} />
                 </motion.div>
               </div>
             </FloatingFocusManager>
