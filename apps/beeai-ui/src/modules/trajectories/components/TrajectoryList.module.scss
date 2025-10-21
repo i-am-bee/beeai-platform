@@ -24,6 +24,7 @@
 .list {
   block-size: 100%;
   padding-inline-start: $spacing-05;
+  padding-block-end: $spacing-05;
   display: flex;
   flex-direction: column;
   row-gap: rem(28px);
@@ -33,7 +34,8 @@
     max-block-size: rem(240px);
     overflow-y: auto;
   }
-  :not(.autoScroll) & {
-    padding-block-end: $spacing-05;
+
+  .scrollGuard {
+    margin-block-start: rem(-28px);
   }
 }

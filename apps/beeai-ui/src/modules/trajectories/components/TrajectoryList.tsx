@@ -42,24 +42,30 @@ export function TrajectoryList({ trajectories, isOpen, autoScroll }: Props) {
     return () => resizeObserver.disconnect();
   }, [autoScroll, trajectories.length]);
 
+  console.log({ trajectories });
+
   return (
     <AnimatePresence>
       {isOpen && (
         <motion.div
-          {...fadeProps()}
+          {...fadeProps({
+            visible: { height: 'auto' },
+            hidden: { height: 0 },
+          })}
           className={clsx(classes.root, { [classes.autoScroll]: autoScroll })}
-          onAnimationStart={() => {}}
         >
-          <div className={classes.border} style={{ blockSize: autoScroll ? `${listHeight}px` : undefined }} />
-          <ul className={classes.list} ref={listRef}>
-            {trajectories.map((trajectory) => (
-              <li key={trajectory.id}>
-                <TrajectoryItem trajectory={trajectory} />
-              </li>
-            ))}
+          <div className={classes.inner}>
+            <div className={classes.border} style={{ blockSize: autoScroll ? `${listHeight}px` : undefined }} />
+            <ul className={classes.list} ref={listRef}>
+              {trajectories.map((trajectory) => (
+                <li key={trajectory.id}>
+                  <TrajectoryItem trajectory={trajectory} />
+                </li>
+              ))}
 
-            {autoScroll && <li ref={autoScrollRef} className={classes.bottom}></li>}
-          </ul>
+              {autoScroll && <li ref={autoScrollRef} className={classes.scrollGuard}></li>}
+            </ul>
+          </div>
         </motion.div>
       )}
     </AnimatePresence>
