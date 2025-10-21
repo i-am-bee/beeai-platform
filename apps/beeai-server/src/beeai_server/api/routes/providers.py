@@ -28,7 +28,7 @@ router = fastapi.APIRouter()
 
 
 @router.post("")
-async def create_provider(
+async def create_connector(
     user: Annotated[AuthorizedUser, Depends(RequiresPermissions(providers={"write"}))],
     request: CreateProviderRequest,
     provider_service: ProviderServiceDependency,
