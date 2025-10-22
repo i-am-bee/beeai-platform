@@ -13,8 +13,6 @@ export const API_URL = process.env.API_URL ?? 'http://127.0.0.1:8333';
 
 export const PROD_MODE = process.env.NODE_ENV === 'production';
 
-export const GET_SUPPORT_LINK = 'https://github.com/i-am-bee/beeai-platform/discussions/categories/q-a';
-
 export const DOCUMENTATION_LINK = 'https://docs.beeai.dev';
 
 export const BEE_AI_FRAMEWORK_TAG = 'BeeAI';
