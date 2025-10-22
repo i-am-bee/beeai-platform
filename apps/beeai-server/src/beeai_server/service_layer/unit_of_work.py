@@ -4,6 +4,7 @@
 from typing import Protocol, Self
 
 from beeai_server.domain.repositories.configurations import IConfigurationsRepository
+from beeai_server.domain.repositories.connector import IConnectorRepository
 from beeai_server.domain.repositories.context import IContextRepository
 from beeai_server.domain.repositories.env import IEnvVariableRepository
 from beeai_server.domain.repositories.file import IFileRepository
@@ -27,6 +28,7 @@ class IUnitOfWork(Protocol):
     vector_stores: IVectorStoreRepository
     vector_database: IVectorDatabaseRepository
     user_feedback: IUserFeedbackRepository
+    connectors: IConnectorRepository
 
     async def __aenter__(self) -> Self: ...
     async def __aexit__(self, exc_type, exc, tb) -> None: ...
