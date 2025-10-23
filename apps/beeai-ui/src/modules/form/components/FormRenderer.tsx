@@ -4,7 +4,7 @@
  */
 
 import { Button } from '@carbon/react';
-import type { FormRender } from 'beeai-sdk';
+import type { FormDemands } from 'beeai-sdk';
 import { FormProvider, useForm } from 'react-hook-form';
 
 import { AgentRunHeader } from '#modules/agents/components/detail/AgentRunHeader.tsx';
@@ -17,7 +17,7 @@ import { FormFields } from './FormFields';
 import classes from './FormRenderer.module.scss';
 
 interface Props {
-  definition: FormRender;
+  definition: FormDemands;
   defaultHeading?: string | null;
   showHeading?: boolean;
   isDisabled?: boolean;
