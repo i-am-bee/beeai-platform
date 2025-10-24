@@ -113,7 +113,7 @@ export function RunInput({ promptExamples, onMessageSent }: Props) {
 
             onMessageSent?.();
 
-            await chat(input);
+            await chat(input, {});
           })();
         }}
       >

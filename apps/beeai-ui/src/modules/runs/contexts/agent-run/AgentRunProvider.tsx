@@ -5,15 +5,15 @@
 
 'use client';
 import { useQueryClient } from '@tanstack/react-query';
-import type { AgentSettings } from 'beeai-sdk';
+import { TaskStatusUpdateType } from 'beeai-sdk';
 import { useRouter } from 'next/navigation';
 import type { PropsWithChildren } from 'react';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { v4 as uuid } from 'uuid';
 
-import { type AgentA2AClient, type ChatRun, RunResultType } from '#api/a2a/types.ts';
+import type { AgentA2AClient, ChatRun } from '#api/a2a/types.ts';
 import { createTextPart } from '#api/a2a/utils.ts';
-import { getAgentExtensions, getErrorCode } from '#api/utils.ts';
+import { getErrorCode } from '#api/utils.ts';
 import { useHandleError } from '#hooks/useHandleError.ts';
 import type { Agent } from '#modules/agents/api/types.ts';
 import { FileUploadProvider } from '#modules/files/contexts/FileUploadProvider.tsx';
@@ -30,7 +30,6 @@ import { usePlatformContext } from '#modules/platform-context/contexts/index.ts'
 import { useEnsurePlatformContext } from '#modules/platform-context/hooks/useEnsurePlatformContext.ts';
 import { useBuildA2AClient } from '#modules/runs/api/queries/useBuildA2AClient.ts';
 import { useStartOAuth } from '#modules/runs/hooks/useStartOAuth.ts';
-import { getSettingsRenderDefaultValues } from '#modules/runs/settings/utils.ts';
 import type { RunStats } from '#modules/runs/types.ts';
 import { SourcesProvider } from '#modules/sources/contexts/SourcesProvider.tsx';
 import { getMessagesSourcesMap } from '#modules/sources/utils.ts';
@@ -39,9 +38,9 @@ import { isNotNull } from '#utils/helpers.ts';
 import { routes } from '#utils/router.ts';
 
 import { useAgentDemands } from '../agent-demands';
+import type { FulfillmentsContext } from '../agent-demands/agent-demands-context';
 import { AgentDemandsProvider } from '../agent-demands/AgentDemandsProvider';
 import { AgentSecretsProvider } from '../agent-secrets/AgentSecretsProvider';
-import type { AgentRequestSecrets } from '../agent-secrets/types';
 import { AgentStatusProvider } from '../agent-status/AgentStatusProvider';
 import { AgentRunContext, AgentRunStatus } from './agent-run-context';
 
@@ -52,7 +51,6 @@ interface Props {
 export function AgentRunProviders({ agent, children }: PropsWithChildren<Props>) {
   const { agentClient } = useBuildA2AClient({
     providerId: agent.provider.id,
-    extensions: getAgentExtensions(agent),
   });
 
   useEnsurePlatformContext(agent);
@@ -86,20 +84,12 @@ function AgentRunProvider({ agent, agentClient, children }: PropsWithChildren<Ag
   const [input, setInput] = useState<string>();
   const [isPending, setIsPending] = useState(false);
   const [stats, setStats] = useState<RunStats>();
-  const settings = useRef<AgentSettings | undefined>(undefined);
   const pendingSubscription = useRef<() => void>(undefined);
   const pendingRun = useRef<ChatRun>(undefined);
 
   const { contextId, getContextId, updateContextWithAgentMetadata } = usePlatformContext();
   const { getFullfilments } = useAgentDemands();
   const { files, clearFiles } = useFileUpload();
-
-  useEffect(() => {
-    const settingsDemands = agentClient?.settingsDemands;
-    if (settingsDemands) {
-      settings.current = getSettingsRenderDefaultValues(settingsDemands);
-    }
-  }, [agentClient?.settingsDemands]);
 
   const updateCurrentAgentMessage = useCallback(
     (updater: (message: UIAgentMessage) => void) => {
@@ -181,7 +171,7 @@ function AgentRunProvider({ agent, agentClient, children }: PropsWithChildren<Ag
   }, [agentClient, errorHandler, getMessages]);
 
   const run = useCallback(
-    async (message: UIUserMessage, taskId?: TaskId) => {
+    async (message: UIUserMessage, fulfillmentsContext: FulfillmentsContext) => {
       if (!agentClient) {
         throw new Error('Agent client is not initialized');
       }
@@ -193,7 +183,7 @@ function AgentRunProvider({ agent, agentClient, children }: PropsWithChildren<Ag
 
       const contextId = getContextId();
 
-      const fulfillments = await getFullfilments();
+      const fulfillments = await getFullfilments(fulfillmentsContext);
 
       const agentMessage: UIAgentMessage = {
         id: uuid(),
@@ -211,8 +201,7 @@ function AgentRunProvider({ agent, agentClient, children }: PropsWithChildren<Ag
           message,
           contextId,
           fulfillments,
-          taskId,
-          settings: settings.current,
+          taskId: fulfillmentsContext.taskId,
         });
         pendingRun.current = run;
 
@@ -237,22 +226,23 @@ function AgentRunProvider({ agent, agentClient, children }: PropsWithChildren<Ag
         });
 
         const result = await run.done;
-        if (result && result.type === RunResultType.FormRequired) {
+        if (result && result.type === TaskStatusUpdateType.FormRequired) {
           updateCurrentAgentMessage((message) => {
             message.status = UIMessageStatus.InputRequired;
             message.parts.push({ kind: UIMessagePartKind.Form, ...result.form });
           });
-        } else if (result && result.type === RunResultType.OAuthRequired) {
+        } else if (result && result.type === TaskStatusUpdateType.OAuthRequired) {
           updateCurrentAgentMessage((message) => {
             message.status = UIMessageStatus.InputRequired;
             message.parts.push({ kind: UIMessagePartKind.OAuth, url: result.url, taskId: result.taskId });
           });
-        } else if (result && result.type === RunResultType.SecretRequired) {
+        } else if (result && result.type === TaskStatusUpdateType.SecretRequired) {
           updateCurrentAgentMessage((message) => {
             message.status = UIMessageStatus.InputRequired;
+
             message.parts.push({
               kind: UIMessagePartKind.SecretRequired,
-              secret: result.secret,
+              secret: result.demands,
               taskId: result.taskId,
             });
           });
@@ -288,7 +278,7 @@ function AgentRunProvider({ agent, agentClient, children }: PropsWithChildren<Ag
   );
 
   const chat = useCallback(
-    (input: string) => {
+    (input: string, fulfillmentsContext: FulfillmentsContext) => {
       checkPendingRun();
       cancelPendingTask();
 
@@ -302,13 +292,13 @@ function AgentRunProvider({ agent, agentClient, children }: PropsWithChildren<Ag
 
       clearFiles();
 
-      return run(message);
+      return run(message, fulfillmentsContext);
     },
     [cancelPendingTask, checkPendingRun, clearFiles, files, run],
   );
 
-  const submitForm = useCallback(
-    (form: UIMessageForm, taskId?: TaskId) => {
+  const submitRuntimeForm = useCallback(
+    (form: UIMessageForm, taskId: TaskId) => {
       checkPendingRun();
 
       const message: UIUserMessage = {
@@ -318,7 +308,23 @@ function AgentRunProvider({ agent, agentClient, children }: PropsWithChildren<Ag
         form,
       };
 
-      return run(message, taskId);
+      return run(message, { taskId, formFullfillments: form.response });
+    },
+    [checkPendingRun, run],
+  );
+
+  const submitForm = useCallback(
+    (form: UIMessageForm) => {
+      checkPendingRun();
+
+      const message: UIUserMessage = {
+        id: uuid(),
+        role: Role.User,
+        parts: [],
+        form,
+      };
+
+      return run(message, { formFullfillments: form.response });
     },
     [checkPendingRun, run],
   );
@@ -332,22 +338,21 @@ function AgentRunProvider({ agent, agentClient, children }: PropsWithChildren<Ag
         auth: redirectUri,
       };
 
-      await run(userMessage, taskId);
+      await run(userMessage, { taskId, oauthRedirectUri: redirectUri });
     },
   });
 
   const submitSecrets = useCallback(
-    (runtimeFullfilledDemands: AgentRequestSecrets, taskId: TaskId) => {
+    (taskId: TaskId, providedSecrets: Record<string, string>) => {
       checkPendingRun();
 
       const message: UIUserMessage = {
         id: uuid(),
         role: Role.User,
         parts: [],
-        runtimeFullfilledDemands,
       };
 
-      return run(message, taskId);
+      return run(message, { taskId, providedSecrets });
     },
     [checkPendingRun, run],
   );
@@ -364,10 +369,6 @@ function AgentRunProvider({ agent, agentClient, children }: PropsWithChildren<Ag
     return AgentRunStatus.Ready;
   }, [agentClient, contextId, isPending]);
 
-  const onUpdateSettings = useCallback((values: AgentSettings) => {
-    settings.current = values;
-  }, []);
-
   const contextValue = useMemo(() => {
     return {
       agent,
@@ -379,15 +380,13 @@ function AgentRunProvider({ agent, agentClient, children }: PropsWithChildren<Ag
       hasMessages: Boolean(getMessages().length),
       input,
       stats,
-      settingsRender: agentClient?.settingsDemands ?? null,
       chat,
       submitForm,
+      submitRuntimeForm,
       startAuth,
       submitSecrets,
       cancel,
       clear,
-      onUpdateSettings,
-      getSettings: () => settings.current,
     };
   }, [
     agent,
@@ -397,11 +396,11 @@ function AgentRunProvider({ agent, agentClient, children }: PropsWithChildren<Ag
     clear,
     getMessages,
     input,
-    onUpdateSettings,
     startAuth,
     stats,
     status,
     submitForm,
+    submitRuntimeForm,
     submitSecrets,
   ]);
 
